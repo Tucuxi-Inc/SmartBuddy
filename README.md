@@ -22,12 +22,44 @@ SmartBuddy replaces static personality stats with a real cognitive engine. Inste
 ```bash
 git clone https://github.com/Tucuxi-Inc/SmartBuddy.git
 cd SmartBuddy && pip install -e .
-# In Claude Code: /buddy
+# In Claude Code:
+claude --plugin-dir /path/to/SmartBuddy
+# Then: /buddy
 ```
+
+## How It Works
+
+```
+  Coding Events (tool use)
+    → Perception Mapper (14-dim vector)
+      → 5 Director RNNs (14→8→6, learn via REINFORCE)
+        → 8-Voice Council (deliberates)
+          → Decision Model (U = Pᵀ · W · x + b)
+            → Action + Expression + Speech
+
+  ┌─────────────────────────────────────────┐
+  │  50-Trait Personality (feeds everything) │
+  │  12 Emotions (decay, modify traits)      │
+  │  7 Evolution Triggers (permanent shifts) │
+  └─────────────────────────────────────────┘
+```
+
+**[Explore the interactive architecture visualization](docs/architecture-viz.html)** — click any component to see the math, simulate ticks, and switch between species.
 
 ## Meet the Species
 
 Every developer gets one of 18 species, determined by your user ID. Each species starts with different trait biases, but all are equally capable -- differentiation comes from cognition, not rarity.
+
+> **Want a different species?** Species selection is deterministic from your account — you can't reroll. This is intentional: your buddy is *yours*. Species selection and rerolling are on the [community roadmap](CONTRIBUTING.md) if you'd like to contribute.
+
+```
+    /\_/\       __         /\/\
+   (. .)      (. .)      (. . )
+    > ^ <      )>        >===<
+    /| |\      / |        | /|
+   (_| |_)   (_/         |/ |~
+     Cat       Duck       Dragon
+```
 
 | Species | Archetype | Personality |
 |---------|-----------|-------------|
