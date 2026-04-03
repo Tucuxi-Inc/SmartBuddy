@@ -242,7 +242,7 @@ process.stdin.on('end', () => {
     // Build speech bubble (max 30 chars to fit)
     let bubble = '';
     if (speech) {
-      const trimmed = speech.length > 28 ? speech.slice(0, 27) + '\u2026' : speech;
+      const trimmed = speech.length > 58 ? speech.slice(0, 57) + '\u2026' : speech;
       bubble = `\x1b[2;3m"${trimmed}"\x1b[0m`;
     }
 
