@@ -4,6 +4,16 @@
 
 SmartBuddy replaces static personality stats with a real cognitive engine. Instead of five hardcoded numbers and canned reactions, your coding companion has a 50-trait personality, neural network directors that learn from your coding patterns, an 8-voice deliberative council, and 12 emotions with natural decay. Two developers with the same species will have completely different buddies after a month of real use -- because personality is earned through experience, not assigned at random.
 
+## Privacy & Security
+
+SmartBuddy runs **entirely on your machine**. No exceptions.
+
+- **No network calls.** Zero. The cognitive engine is pure NumPy math running locally. No API calls, no telemetry, no phoning home.
+- **No LLM in the loop.** Your buddy's brain is a lightweight neural network (~50KB), not an LLM. Decisions come from math, not inference calls.
+- **No code access.** SmartBuddy never reads your source files. It only sees tool names (e.g., "Bash", "Edit"), file paths, and success/fail signals from Claude Code hooks. It has no access to file contents, terminal output, or conversation text.
+- **No data collection.** All state lives in your local plugin data directory (`~/.claude/plugins/data/smartbuddy/`). Nothing leaves your machine.
+- **Fully auditable.** The entire engine is ~1,700 lines of Python. Read it yourself — there's nothing hidden.
+
 ## Original Buddy vs SmartBuddy
 
 | Feature | Original Buddy | SmartBuddy |
