@@ -9,6 +9,7 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "typescript": "^5.4",
     "vitest": "^1.0"
   }
