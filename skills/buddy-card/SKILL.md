@@ -5,13 +5,15 @@ description: Show your buddy's full stat card with traits, emotions, and evoluti
 
 # Buddy Card
 
-Read the buddy's mind.json file from the plugin data directory to get full stats. Display a formatted card showing:
+The buddy's full state is already in your context — look for the `[SMARTBUDDY_FULL_STATE]` block. Format a stat card from it showing:
 
-1. **Species** and tick count
-2. **Top 10 traits** with current values and shift from creation
-3. **Active emotions** with intensity
-4. **Recent evolution events**
-5. **Earned adornments**
-6. **Council activations**
+1. **Name, species**, and tick count
+2. **Sprite** — the ASCII art from "Current appearance"
+3. **Top 10 traits** as a table with current values and shifts from creation
+4. **Active emotions** with intensity
+5. **Active personality shifts** if any traits show non-zero shift values
+6. **Council activations** — which voices are dominant
+7. **Evolution history** — triggers that fired
+8. **Earned adornments**
 
-The mind.json location is `${CLAUDE_PLUGIN_DATA}/mind.json` or `~/.smartbuddy/mind.json`.
+Do NOT read mind.json from disk — everything you need is in your context.
