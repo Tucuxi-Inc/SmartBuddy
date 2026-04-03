@@ -39,13 +39,26 @@ export class Mulberry32 {
         return z * sigma;
     }
 }
+// Name syllable pools — combine to build short, pronounceable buddy names.
+const NAME_STARTS = [
+    "Ax", "Bub", "Chi", "Dex", "Eko", "Fin", "Glo", "Hex",
+    "Iri", "Jax", "Kip", "Lix", "Mox", "Nyx", "Ori", "Pip",
+    "Quo", "Rex", "Sol", "Tux", "Umi", "Vex", "Wix", "Xen",
+    "Yuki", "Zen", "Ash", "Blix", "Coda", "Drift",
+];
+const NAME_ENDS = [
+    "o", "i", "a", "us", "el", "is", "on", "ix",
+    "ar", "en", "ey", "lo", "ra", "li", "ko", "mi",
+];
 export function rollBones(userId) {
     const hashVal = fnv1a32(userId + SALT);
     const rng = new Mulberry32(hashVal);
     const species = SPECIES_LIST[rng.next() % SPECIES_LIST.length];
+    const name = NAME_STARTS[rng.next() % NAME_STARTS.length] +
+        NAME_ENDS[rng.next() % NAME_ENDS.length];
     for (let i = 0; i < 10; i++)
         rng.next();
     const traitSeeds = Array.from({ length: 50 }, () => rng.nextFloat());
-    return { species, traitSeeds };
+    return { species, name, traitSeeds };
 }
 //# sourceMappingURL=identity.js.map

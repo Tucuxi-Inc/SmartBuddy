@@ -1,5 +1,4 @@
 import { BuddyBrain } from "../src/brain.js";
-import * as fs from "node:fs";
 import * as path from "node:path";
 
 const stateDir = process.env.CLAUDE_PLUGIN_DATA ?? path.join(process.env.HOME ?? "~", ".smartbuddy");
@@ -10,6 +9,7 @@ let input = "";
 process.stdin.setEncoding("utf-8");
 process.stdin.on("data", (chunk: string) => { input += chunk; });
 process.stdin.on("end", () => {
+  if (!input.trim()) return;
   try {
     const event = JSON.parse(input);
     const toolName = event.tool_name ?? event.toolName ?? "";
@@ -21,16 +21,7 @@ process.stdin.on("end", () => {
 
     const result = brain.tick({ tool_name: toolName, tool_input: toolInput, success });
     brain.saveMind(mindPath);
-
-    if (result.speech) {
-      const sprite = result.spriteFrame?.join("\n") ?? "";
-      process.stdout.write(JSON.stringify({
-        hookSpecificOutput: {
-          message: `${sprite}\n\u{1F4AC} ${result.speech}`,
-        },
-      }));
-    }
   } catch {
-    // Silent failure — don't break user's workflow
+    // Silent failure — don't write to stderr, it breaks hook parsing
   }
 });

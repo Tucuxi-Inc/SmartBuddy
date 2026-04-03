@@ -1,11 +1,15 @@
 {
+  "statusLine": {
+    "type": "command",
+    "command": "node hooks/statusline.cjs"
+  },
   "hooks": {
     "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/hooks-src/on-prompt-submit.js",
+            "command": "node dist/hooks-src/on-prompt-submit.js",
             "timeout": 5
           }
         ]
@@ -17,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/hooks-src/on-tool-use.js",
+            "command": "node dist/hooks-src/on-tool-use.js",
             "timeout": 5
           }
         ]

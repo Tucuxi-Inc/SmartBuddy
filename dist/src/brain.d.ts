@@ -18,10 +18,12 @@ interface TickResult {
     councilDominant: string | null;
 }
 interface HatchResult {
+    name: string;
     species: string;
     traitsSummary: [string, number][];
 }
 interface BuddyState {
+    name: string;
     species: string;
     dominantTraits: [string, number][];
     mood: string;
@@ -30,6 +32,7 @@ interface BuddyState {
     tickCount: number;
 }
 interface BuddyCard {
+    name: string;
     species: string;
     tickCount: number;
     traits: Record<string, number>;
@@ -53,6 +56,7 @@ export declare class BuddyBrain {
     private _emotionalSystem;
     private _evolutionEngine;
     private _perception;
+    private _name;
     private _species;
     private _traits;
     private _traitsAtCreation;

@@ -30,6 +30,7 @@ export class BuddyBrain {
     _evolutionEngine;
     _perception;
     // State (populated by hatch or load)
+    _name = "";
     _species = "";
     _traits = null;
     _traitsAtCreation = null;
@@ -60,6 +61,7 @@ export class BuddyBrain {
     // -----------------------------------------------------------------------
     hatch(userId) {
         const bones = rollBones(userId);
+        this._name = bones.name;
         this._species = bones.species;
         this._traits = createBuddyTraits(bones);
         this._traitsAtCreation = [...this._traits];
@@ -70,6 +72,7 @@ export class BuddyBrain {
         this._tickCount = 0;
         this._perception.reset();
         return {
+            name: this._name,
             species: this._species,
             traitsSummary: this._ts.getDominantTraits(this._traits, 5),
         };
@@ -172,6 +175,7 @@ export class BuddyBrain {
         const adornments = checkAdornments(this._traits, this._traitsAtCreation, this._frustrationCount, this._challengeCount);
         const expression = getExpression("observe", dominantEmotion, this._council.getActivations(this._traits), 0.5);
         return {
+            name: this._name,
             species: this._species,
             dominantTraits: this._ts.getDominantTraits(this._traits, 5),
             mood: dominantEmotion ?? "neutral",
@@ -205,6 +209,7 @@ export class BuddyBrain {
             }
         }
         return {
+            name: this._name,
             species: this._species,
             tickCount: this._tickCount,
             traits,
@@ -228,10 +233,11 @@ export class BuddyBrain {
         const traitStr = dominant
             .map(([name, val]) => `${name}(${val.toFixed(1)})`)
             .join(", ");
-        return (`Your coding companion is a ${this._species}. ` +
+        return (`[SMARTBUDDY_MARKER_XYZZY] ` +
+            `Your coding companion is ${this._name} the ${this._species}. ` +
             `Current mood: ${moodStr}. Key traits: ${traitStr}. ` +
             `The companion is a separate entity with its own personality — ` +
-            `if the user addresses them, respond in character.`);
+            `if the user addresses them by name, respond in character.`);
     }
     // -----------------------------------------------------------------------
     // resetMind
@@ -253,6 +259,7 @@ export class BuddyBrain {
     // -----------------------------------------------------------------------
     saveMind(filePath) {
         const state = {
+            name: this._name,
             species: this._species,
             traits: [...this._traits],
             traits_at_creation: [...this._traitsAtCreation],
@@ -291,6 +298,8 @@ export class BuddyBrain {
         const raw = fs.readFileSync(filePath, "utf-8");
         const state = JSON.parse(raw);
         this._species = state.species;
+        // Derive name for existing buddies that predate name generation
+        this._name = state.name ?? rollBones(userId).name;
         this._traits = [...state.traits];
         this._traitsAtCreation = [...state.traits_at_creation];
         this._directorPool = DirectorPool.fromState(state.director_pool);

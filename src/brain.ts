@@ -51,11 +51,13 @@ interface TickResult {
 }
 
 interface HatchResult {
+  name: string;
   species: string;
   traitsSummary: [string, number][];
 }
 
 interface BuddyState {
+  name: string;
   species: string;
   dominantTraits: [string, number][];
   mood: string;
@@ -65,6 +67,7 @@ interface BuddyState {
 }
 
 interface BuddyCard {
+  name: string;
   species: string;
   tickCount: number;
   traits: Record<string, number>;
@@ -101,6 +104,7 @@ interface SavedPersonalityShift {
 }
 
 interface SavedState {
+  name?: string;
   species: string;
   traits: number[];
   traits_at_creation: number[];
@@ -126,6 +130,7 @@ export class BuddyBrain {
   private _perception: PerceptionMapper;
 
   // State (populated by hatch or load)
+  private _name: string = "";
   private _species: string = "";
   private _traits: number[] | null = null;
   private _traitsAtCreation: number[] | null = null;
@@ -160,6 +165,7 @@ export class BuddyBrain {
 
   hatch(userId: string): HatchResult {
     const bones = rollBones(userId);
+    this._name = bones.name;
     this._species = bones.species;
     this._traits = createBuddyTraits(bones);
     this._traitsAtCreation = [...this._traits];
@@ -171,6 +177,7 @@ export class BuddyBrain {
     this._perception.reset();
 
     return {
+      name: this._name,
       species: this._species,
       traitsSummary: this._ts.getDominantTraits(this._traits, 5),
     };
@@ -351,6 +358,7 @@ export class BuddyBrain {
       0.5,
     );
     return {
+      name: this._name,
       species: this._species,
       dominantTraits: this._ts.getDominantTraits(this._traits, 5),
       mood: dominantEmotion ?? "neutral",
@@ -388,6 +396,7 @@ export class BuddyBrain {
     }
 
     return {
+      name: this._name,
       species: this._species,
       tickCount: this._tickCount,
       traits,
@@ -419,10 +428,11 @@ export class BuddyBrain {
       .map(([name, val]) => `${name}(${val.toFixed(1)})`)
       .join(", ");
     return (
-      `Your coding companion is a ${this._species}. ` +
+      `[SMARTBUDDY_MARKER_XYZZY] ` +
+      `Your coding companion is ${this._name} the ${this._species}. ` +
       `Current mood: ${moodStr}. Key traits: ${traitStr}. ` +
       `The companion is a separate entity with its own personality — ` +
-      `if the user addresses them, respond in character.`
+      `if the user addresses them by name, respond in character.`
     );
   }
 
@@ -449,6 +459,7 @@ export class BuddyBrain {
 
   saveMind(filePath: string): void {
     const state: SavedState = {
+      name: this._name,
       species: this._species,
       traits: [...this._traits!],
       traits_at_creation: [...this._traitsAtCreation!],
@@ -491,6 +502,8 @@ export class BuddyBrain {
     const state: SavedState = JSON.parse(raw);
 
     this._species = state.species;
+    // Derive name for existing buddies that predate name generation
+    this._name = state.name ?? rollBones(userId).name;
     this._traits = [...state.traits];
     this._traitsAtCreation = [...state.traits_at_creation];
     this._directorPool = DirectorPool.fromState(state.director_pool);

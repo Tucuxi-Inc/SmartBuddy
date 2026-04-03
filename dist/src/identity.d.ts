@@ -13,6 +13,7 @@ export declare class Mulberry32 {
 }
 export interface Bones {
     species: string;
+    name: string;
     traitSeeds: number[];
 }
 export declare function rollBones(userId: string): Bones;
