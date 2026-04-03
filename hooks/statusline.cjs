@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const MIND_PATH = path.join(os.homedir(), '.claude', 'plugins', 'data', 'smartbuddy-inline', 'mind.json');
+const MIND_PATH = path.join(process.env.CLAUDE_PLUGIN_DATA || path.join(os.homedir(), '.smartbuddy'), 'mind.json');
 
 // Trait index → name (subset needed for display)
 const TRAIT_NAMES = [

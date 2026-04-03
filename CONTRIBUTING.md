@@ -5,15 +5,21 @@ SmartBuddy is a Claude Code plugin that gives your coding companion a real cogni
 ## Development Setup
 
 ```bash
-npm install          # Install dev dependencies
+npm install          # Install dev dependencies (TypeScript, Vitest)
 npm run build        # Compile TypeScript to dist/
-npm test             # Run all tests
+npm test             # Run all tests (~122 tests, <1 second)
 npm run test:watch   # Watch mode for development
+
+# Run a single test file
+npx vitest run tests/brain.test.ts
+
+# Run tests matching a name pattern
+npx vitest run -t "full session lifecycle"
 ```
 
 Source code is in `src/`, hook handlers in `hooks-src/`, tests in `tests/`.
 
-The pre-compiled `dist/` directory is committed so end users need zero build steps. After making any changes to `src/` or `hooks-src/`, run `npm run build` to recompile before committing.
+The pre-compiled `dist/` directory is committed so end users need zero build steps. After making any changes to `src/` or `hooks-src/`, run `npm run build` to recompile before committing. Remember to commit the updated `dist/` alongside your source changes.
 
 ## Math Reference
 

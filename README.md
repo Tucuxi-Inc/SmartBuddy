@@ -9,8 +9,8 @@ Two developers with the same species will have completely different buddies afte
 ## Quick Start
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/Tucuxi-Inc/SmartBuddy.git
+# 1. Clone the repo (use the TypeScript branch until it merges to main)
+git clone -b feature/typescript-port https://github.com/Tucuxi-Inc/SmartBuddy.git
 
 # 2. Launch Claude Code with SmartBuddy loaded
 claude --plugin-dir /path/to/SmartBuddy
@@ -24,6 +24,10 @@ That's it. No build step required -- pre-compiled JavaScript is included in `dis
 ### Prerequisites
 
 Just [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview). Nothing else to install.
+
+### State & Data
+
+Your buddy's cognitive state (personality, learned RNN weights, emotions, evolution history) is saved to `~/.smartbuddy/mind.json`. This file persists across sessions -- your buddy picks up where it left off. If the `CLAUDE_PLUGIN_DATA` environment variable is set, state is stored there instead.
 
 ## Privacy
 
@@ -92,13 +96,21 @@ Every developer gets one of 18 species, determined by your user ID. Each starts 
 ## For Contributors
 
 ```bash
-npm install        # Install dev dependencies (TypeScript, Vitest)
-npm run build      # Compile src/ and hooks-src/ to dist/
-npm test           # Run all tests (~120 tests, <1 second)
-npm run test:watch # Watch mode for development
+npm install          # Install dev dependencies (TypeScript, Vitest)
+npm run build        # Compile src/ and hooks-src/ to dist/
+npm test             # Run all tests (~122 tests, <1 second)
+npm run test:watch   # Watch mode for development
+
+# Run a single test file
+npx vitest run tests/brain.test.ts
+
+# Run tests matching a name pattern
+npx vitest run -t "full session lifecycle"
 ```
 
-Code lives in `src/`, hooks in `hooks-src/`, tests in `tests/`. The pre-compiled `dist/` directory is committed so end users need zero build steps. Run `npm run build` after any source changes.
+Code lives in `src/`, hooks in `hooks-src/`, tests in `tests/`. The pre-compiled `dist/` directory is committed so end users need zero build steps. Run `npm run build` after any source changes before committing.
+
+**Important**: This is a zero-dependency project. There are no runtime dependencies -- only dev dependencies (TypeScript compiler and Vitest). The cognitive engine is pure math implemented in TypeScript.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full mathematical specification -- decision model equations, RNN weight layout, council voice weights, trait taxonomy, perception dimensions, emotion decay formulas, and evolution rules.
 
