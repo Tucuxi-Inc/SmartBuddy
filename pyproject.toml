@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "smartbuddy-engine"
+version = "0.1.0"
+description = "A cognitive coding companion powered by real neural architecture"
+readme = "README.md"
+license = "PolyForm-Noncommercial-1.0.0"
+requires-python = ">=3.11"
+authors = [
+    {name = "Kevin Keller", email = "kevin@tucuxi.ai"},
+]
+dependencies = [
+    "numpy>=1.26",
+    "mcp>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
