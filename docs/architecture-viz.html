@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inside the SmartBuddy Mind</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#c8ccd4;font-family:'Inter',system-ui,sans-serif;overflow-x:hidden;min-height:100vh}
+::selection{background:#4f46e5;color:#fff}
+
+/* --- Layout --- */
+.header{text-align:center;padding:40px 20px 20px;position:relative;z-index:2}
+.header h1{font-size:2.4em;font-weight:700;background:linear-gradient(135deg,#06d6a0,#4cc9f0,#7b2ff7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.02em}
+.header p{color:#6b7280;font-size:1.05em;margin-top:8px;max-width:640px;margin-left:auto;margin-right:auto}
+.controls{display:flex;gap:12px;justify-content:center;margin:18px auto;flex-wrap:wrap}
+.controls button,.controls select{background:#161625;border:1px solid #2a2a40;color:#c8ccd4;padding:10px 22px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.9em;transition:all .25s}
+.controls button:hover,.controls select:hover{border-color:#4cc9f0;box-shadow:0 0 12px rgba(76,201,240,.25)}
+.controls button.active{border-color:#06d6a0;box-shadow:0 0 14px rgba(6,214,160,.3)}
+
+/* --- Main canvas area --- */
+.viz-wrap{position:relative;width:100%;max-width:1400px;margin:0 auto;padding:0 20px}
+canvas#main{width:100%;height:620px;display:block;border-radius:12px}
+
+/* --- Info Panel --- */
+.info-panel{position:fixed;right:-420px;top:0;width:400px;height:100vh;background:#111122ee;backdrop-filter:blur(12px);border-left:1px solid #2a2a40;padding:32px 24px;transition:right .35s ease;z-index:100;overflow-y:auto}
+.info-panel.open{right:0}
+.info-panel h3{font-size:1.2em;margin-bottom:10px;color:#fff}
+.info-panel .close-btn{position:absolute;top:16px;right:16px;background:none;border:none;color:#6b7280;font-size:1.4em;cursor:pointer}
+.info-panel .close-btn:hover{color:#fff}
+.info-panel p,.info-panel li{font-size:.88em;line-height:1.6;color:#9ca3af;margin-bottom:8px}
+.info-panel code{font-family:'JetBrains Mono',monospace;background:#1e1e30;padding:2px 6px;border-radius:4px;font-size:.82em;color:#06d6a0}
+.info-panel .math{font-family:'JetBrains Mono',monospace;background:#1a1a2e;border:1px solid #2a2a40;border-radius:6px;padding:10px 14px;margin:10px 0;color:#4cc9f0;font-size:.85em;line-height:1.5}
+.info-panel ul{padding-left:18px;margin-bottom:12px}
+.info-panel .accent-cyan{color:#4cc9f0}.info-panel .accent-amber{color:#f59e0b}.info-panel .accent-purple{color:#a78bfa}.info-panel .accent-green{color:#06d6a0}.info-panel .accent-pink{color:#f472b6}.info-panel .accent-blue{color:#60a5fa}
+.info-panel .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75em;margin-right:4px;margin-bottom:4px}
+.tag-cyan{background:#0e424a;color:#4cc9f0}.tag-amber{background:#422d0e;color:#f59e0b}.tag-purple{background:#2d1b4e;color:#a78bfa}.tag-green{background:#0e3d2e;color:#06d6a0}.tag-pink{background:#3d0e2e;color:#f472b6}
+
+/* --- Bottom bar (trait chart + emotions + species) --- */
+.bottom-row{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:16px;max-width:1400px;margin:16px auto;padding:0 20px}
+.panel{background:#111122;border:1px solid #1e1e30;border-radius:10px;padding:16px;position:relative}
+.panel h4{font-size:.85em;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+canvas.sub-canvas{width:100%;height:220px;display:block}
+
+/* --- Sim log --- */
+.sim-log{position:fixed;bottom:16px;left:16px;width:320px;max-height:180px;overflow-y:auto;background:#0d0d1dee;border:1px solid #1e1e30;border-radius:8px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:.72em;color:#6b7280;z-index:50;display:none}
+.sim-log.visible{display:block}
+.sim-log .entry{margin-bottom:3px;border-left:2px solid #2a2a40;padding-left:8px}
+.sim-log .entry.perception{border-color:#4cc9f0}.sim-log .entry.director{border-color:#f59e0b}
+.sim-log .entry.council{border-color:#a78bfa}.sim-log .entry.decision{border-color:#06d6a0}
+.sim-log .entry.emotion{border-color:#f472b6}
+
+@media(max-width:900px){
+  .bottom-row{grid-template-columns:1fr}
+  .info-panel{width:100%;right:-100%}
+  canvas#main{height:500px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Inside the SmartBuddy Mind</h1>
+  <p>A real cognitive architecture for your coding companion</p>
+  <div class="controls">
+    <button id="btnSimulate" onclick="runSimulation()">Simulate Tick</button>
+    <select id="speciesSelect" onchange="changeSpecies(this.value)">
+      <option value="duck">Duck</option><option value="goose">Goose</option>
+      <option value="cat">Cat</option><option value="rabbit">Rabbit</option>
+      <option value="owl" selected>Owl</option><option value="penguin">Penguin</option>
+      <option value="turtle">Turtle</option><option value="snail">Snail</option>
+      <option value="dragon">Dragon</option><option value="octopus">Octopus</option>
+      <option value="axolotl">Axolotl</option><option value="ghost">Ghost</option>
+      <option value="robot">Robot</option><option value="blob">Blob</option>
+      <option value="cactus">Cactus</option><option value="mushroom">Mushroom</option>
+      <option value="chonk">Chonk</option><option value="capybara">Capybara</option>
+    </select>
+    <button id="btnAutoplay" onclick="toggleAutoplay()">Autoplay</button>
+  </div>
+</div>
+
+<div class="viz-wrap">
+  <canvas id="main"></canvas>
+</div>
+
+<div class="bottom-row">
+  <div class="panel">
+    <h4>Personality Traits (top 15)</h4>
+    <canvas id="traitChart" class="sub-canvas"></canvas>
+  </div>
+  <div class="panel">
+    <h4>Action Probabilities</h4>
+    <canvas id="actionChart" class="sub-canvas"></canvas>
+  </div>
+  <div class="panel">
+    <h4>Emotional State</h4>
+    <canvas id="emotionChart" class="sub-canvas"></canvas>
+  </div>
+</div>
+
+<div class="info-panel" id="infoPanel">
+  <button class="close-btn" onclick="closePanel()">&times;</button>
+  <div id="infoPanelContent"></div>
+</div>
+
+<div class="sim-log" id="simLog"></div>
+
+<script>
+// ============================================================
+// DATA: mirrors the Python engine exactly
+// ============================================================
+const PERCEPTION_NAMES = [
+  "collaboration_density","pressure_level","project_health","session_momentum",
+  "user_consistency","novelty","time_sin","time_cos","session_depth",
+  "recent_success","iteration_pattern","friction_level","conversation_density",
+  "codebase_familiarity"
+];
+const DIRECTOR_ROLES = ["Integrator","Analyst","Evaluator","Strategist","Critic"];
+const BIAS_NAMES = ["caution","social","exploration","cooperation","resource","urgency"];
+const COUNCIL_VOICES = ["Cortex","Seer","Oracle","House","Prudence","Hypothalamus","Amygdala","Conscience"];
+const ACTIONS = ["observe","curious_comment","engage","study","encourage","suggest","challenge","teach","emote","journal","gift"];
+const EMOTIONS = ["joy","curiosity","frustration","anxiety","satisfaction","surprise","determination","boredom","excitement","wariness","contentment","irritation"];
+const TRAIT_NAMES = [
+  "openness","conscientiousness","extraversion","agreeableness","neuroticism",
+  "creativity","curiosity","adaptability","resilience","ambition",
+  "empathy","trust","assertiveness","self_control","optimism",
+  "risk_taking","patience","humor","independence","sensitivity",
+  "depth_drive","dominance","warmth","discipline","integrity",
+  "loyalty","competitiveness","generosity","pragmatism","idealism",
+  "sociability","introversion","analytical","intuitive","emotional_stability",
+  "persistence","flexibility","confidence","humility","cooperativeness",
+  "resourcefulness","adventurousness","caution","traditionalism","innovation",
+  "tolerance","expressiveness","stoicism","spirituality","playfulness"
+];
+
+const SPECIES = {
+  duck:{high:["sociability","optimism","adaptability","extraversion"],low:["persistence","independence"]},
+  goose:{high:["assertiveness","loyalty","persistence","dominance"],low:["agreeableness","flexibility"]},
+  cat:{high:["independence","patience","self_control","sensitivity"],low:["agreeableness","sociability"]},
+  rabbit:{high:["sensitivity","adaptability","conscientiousness","neuroticism"],low:["emotional_stability","risk_taking"]},
+  owl:{high:["analytical","patience","conscientiousness","depth_drive"],low:["playfulness","extraversion"]},
+  penguin:{high:["persistence","loyalty","sociability","discipline"],low:["independence","adventurousness"]},
+  turtle:{high:["persistence","caution","conscientiousness","patience"],low:["risk_taking","playfulness"]},
+  snail:{high:["patience","conscientiousness","self_control","humility"],low:["assertiveness","dominance"]},
+  dragon:{high:["assertiveness","confidence","curiosity","ambition"],low:["caution","agreeableness"]},
+  octopus:{high:["creativity","adaptability","curiosity","resourcefulness"],low:["discipline","persistence"]},
+  axolotl:{high:["resilience","optimism","adaptability","emotional_stability"],low:["competitiveness","dominance"]},
+  ghost:{high:["independence","creativity","depth_drive","introversion"],low:["sociability","extraversion"]},
+  robot:{high:["conscientiousness","discipline","self_control","analytical"],low:["expressiveness","playfulness"]},
+  blob:{high:["adaptability","agreeableness","resilience","emotional_stability"],low:["assertiveness","ambition"]},
+  cactus:{high:["independence","persistence","resourcefulness","stoicism"],low:["sociability","sensitivity"]},
+  mushroom:{high:["depth_drive","patience","cooperativeness","empathy"],low:["assertiveness","dominance"]},
+  chonk:{high:["emotional_stability","discipline","patience","warmth"],low:["ambition","risk_taking"]},
+  capybara:{high:["sociability","emotional_stability","empathy","agreeableness"],low:["neuroticism","competitiveness"]},
+};
+
+const COUNCIL_WEIGHTS = {
+  Cortex:[["openness",.4],["conscientiousness",.3],["adaptability",.15],["self_control",.15]],
+  Seer:[["creativity",.4],["depth_drive",.35],["openness",.25]],
+  Oracle:[["risk_taking",.3],["ambition",.35],["adaptability",.2],["openness",.15]],
+  House:[["trust",.3],["self_control",.25],["agreeableness",.25],["empathy",.2]],
+  Prudence:[["conscientiousness",.35],["self_control",.35],["neuroticism",.15],["trust",.15]],
+  Hypothalamus:[["extraversion",.35],["dominance",.3],["ambition",.2],["risk_taking",.15]],
+  Amygdala:[["neuroticism",.45],["resilience",-.3],["trust",-.25]],
+  Conscience:[["agreeableness",.3],["empathy",.35],["trust",.2],["self_control",.15]],
+};
+
+const ACTION_MAP = {
+  observe:[.2,-.3,-.3,0,0,-.5],curious_comment:[-.2,.1,.5,.1,-.1,.2],
+  engage:[0,.5,0,.3,0,.1],study:[.2,-.2,.2,0,.3,-.3],
+  encourage:[0,.4,0,.5,-.1,0],suggest:[0,.2,.1,.2,.3,.2],
+  challenge:[-.3,.1,0,-.3,0,.4],teach:[.1,.3,-.1,.3,-.2,0],
+  emote:[-.1,.3,.1,.1,-.2,.1],journal:[.3,-.1,-.2,0,.2,-.2],
+  gift:[.1,.2,0,.3,.3,-.1],
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let currentSpecies = "owl";
+let traits = new Float64Array(50);
+let perceptionVec = new Float64Array(14);
+let councilActivations = {};
+let directorOutputs = {};
+let actionProbs = {};
+let activeEmotions = [];
+let simRunning = false;
+let autoplayInterval = null;
+let pulsePhase = 0;
+let pulseActive = true;
+let simCount = 0;
+
+// Node positions on main canvas (computed on resize)
+let nodes = {};
+let dpr = 1;
+let cW = 0, cH = 0;
+
+// ============================================================
+// COLORS
+// ============================================================
+const C = {
+  cyan:"#4cc9f0", cyanDim:"#1a4a5a", amber:"#f59e0b", amberDim:"#4a3a0e",
+  purple:"#a78bfa", purpleDim:"#2d1b4e", green:"#06d6a0", greenDim:"#0e3d2e",
+  pink:"#f472b6", pinkDim:"#3d0e2e", blue:"#60a5fa", blueDim:"#1a2d4e",
+  bg:"#0a0a1a", nodeBg:"#161625", border:"#2a2a40", text:"#c8ccd4", dim:"#6b7280"
+};
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  generateTraits(currentSpecies);
+  randomPerception();
+  computeCouncil();
+  computeDirectors();
+  computeActionProbs();
+  randomEmotions();
+
+  const mc = document.getElementById("main");
+  const ro = new ResizeObserver(() => { setupCanvas(mc); layoutNodes(); draw(); });
+  ro.observe(mc);
+  setupCanvas(mc);
+  layoutNodes();
+
+  // Start ambient pulse
+  requestAnimationFrame(animLoop);
+  drawTraitChart();
+  drawActionChart();
+  drawEmotionChart();
+}
+
+function setupCanvas(c) {
+  dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  cW = rect.width; cH = rect.height;
+  c.width = cW * dpr; c.height = cH * dpr;
+}
+
+function layoutNodes() {
+  const mx = cW * 0.5, my = cH * 0.5;
+  const leftX = cW * 0.06, rightX = cW * 0.94;
+  const stageW = (rightX - leftX);
+
+  // Pipeline stages: Perception -> Directors -> Council -> Decision -> Action
+  const s1 = leftX + stageW * 0.0;   // perception
+  const s2 = leftX + stageW * 0.22;  // directors
+  const s3 = leftX + stageW * 0.48;  // council (center)
+  const s4 = leftX + stageW * 0.72;  // decision
+  const s5 = leftX + stageW * 0.92;  // action
+
+  // Perception: 14 inputs stacked
+  nodes.perception = [];
+  for (let i = 0; i < 14; i++) {
+    nodes.perception.push({x: s1, y: cH*0.1 + i * (cH*0.8/13), r: 5, label: PERCEPTION_NAMES[i]});
+  }
+
+  // Directors: 5 RNNs
+  nodes.directors = [];
+  for (let i = 0; i < 5; i++) {
+    nodes.directors.push({x: s2, y: cH*0.18 + i * (cH*0.64/4), r: 20, label: DIRECTOR_ROLES[i]});
+  }
+
+  // Council: 8 voices in a ring
+  nodes.council = [];
+  const cr = Math.min(cW * 0.09, cH * 0.22);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
+    nodes.council.push({x: s3 + Math.cos(a) * cr, y: my + Math.sin(a) * cr, r: 16, label: COUNCIL_VOICES[i]});
+  }
+  nodes.councilCenter = {x: s3, y: my};
+
+  // Decision node
+  nodes.decision = {x: s4, y: my, r: 28};
+
+  // Action output
+  nodes.action = {x: s5, y: my, r: 22};
+
+  // Personality hub (near council center, slightly above)
+  nodes.personality = {x: s3, y: my, r: 12};
+}
+
+// ============================================================
+// SIMULATION MATH (mirrors Python engine)
+// ============================================================
+function generateTraits(species) {
+  const arch = SPECIES[species];
+  const highSet = new Set(arch.high.map(n => TRAIT_NAMES.indexOf(n)));
+  const lowSet = new Set(arch.low.map(n => TRAIT_NAMES.indexOf(n)));
+  for (let i = 0; i < 50; i++) {
+    const seed = Math.random();
+    if (highSet.has(i)) traits[i] = 0.65 + seed * 0.10;
+    else if (lowSet.has(i)) traits[i] = 0.25 + seed * 0.10;
+    else traits[i] = 0.30 + seed * 0.40;
+  }
+}
+
+function randomPerception() {
+  for (let i = 0; i < 14; i++) perceptionVec[i] = Math.random();
+  // Circadian encoding
+  const h = new Date().getHours() + new Date().getMinutes()/60;
+  perceptionVec[6] = Math.sin(2*Math.PI*h/24);
+  perceptionVec[7] = Math.cos(2*Math.PI*h/24);
+}
+
+function computeCouncil() {
+  councilActivations = {};
+  for (const [voice, weights] of Object.entries(COUNCIL_WEIGHTS)) {
+    let act = 0;
+    for (const [tname, w] of weights) {
+      const idx = TRAIT_NAMES.indexOf(tname);
+      if (idx >= 0) act += traits[idx] * w;
+    }
+    councilActivations[voice] = act;
+  }
+}
+
+function computeDirectors() {
+  directorOutputs = {};
+  for (const role of DIRECTOR_ROLES) {
+    const out = new Float64Array(6);
+    // Simplified: weighted sum of perception with role-specific seed
+    const seed = DIRECTOR_ROLES.indexOf(role) * 7 + 3;
+    for (let j = 0; j < 6; j++) {
+      let sum = 0;
+      for (let i = 0; i < 14; i++) {
+        const w = Math.sin(seed * (i+1) * (j+1) * 0.37) * 0.5;
+        sum += perceptionVec[i] * w;
+      }
+      out[j] = Math.tanh(sum);
+    }
+    directorOutputs[role] = out;
+  }
+}
+
+function computeActionProbs() {
+  // Mean director bias
+  const meanBias = new Float64Array(6);
+  for (const role of DIRECTOR_ROLES) {
+    for (let j = 0; j < 6; j++) meanBias[j] += directorOutputs[role][j] / 5;
+  }
+
+  // Utility per action
+  const utils = {};
+  for (const action of ACTIONS) {
+    const mapRow = ACTION_MAP[action];
+    let bias = 0;
+    for (let j = 0; j < 6; j++) bias += mapRow[j] * meanBias[j];
+    // Trait dot product (simplified)
+    let traitU = 0;
+    for (let i = 0; i < 50; i++) traitU += traits[i] * (1/50);
+    utils[action] = traitU * 0.5 + bias;
+  }
+
+  // Softmax
+  const vals = ACTIONS.map(a => utils[a]);
+  const mx = Math.max(...vals);
+  const exps = vals.map(v => Math.exp((v - mx) / 1.0));
+  const sum = exps.reduce((a,b) => a+b, 0);
+  actionProbs = {};
+  ACTIONS.forEach((a,i) => { actionProbs[a] = exps[i] / sum; });
+}
+
+function randomEmotions() {
+  activeEmotions = [];
+  const count = 1 + Math.floor(Math.random() * 3);
+  const shuffled = [...EMOTIONS].sort(() => Math.random() - 0.5);
+  for (let i = 0; i < count; i++) {
+    activeEmotions.push({name: shuffled[i], intensity: 0.3 + Math.random() * 0.7});
+  }
+}
+
+// ============================================================
+// DRAWING
+// ============================================================
+let lastTime = 0;
+function animLoop(ts) {
+  const dt = (ts - lastTime) / 1000;
+  lastTime = ts;
+  pulsePhase += dt * 0.8;
+  draw();
+  requestAnimationFrame(animLoop);
+}
+
+function draw() {
+  const c = document.getElementById("main");
+  const ctx = c.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cW, cH);
+
+  drawConnections(ctx);
+  drawPerceptionNodes(ctx);
+  drawDirectorNodes(ctx);
+  drawCouncilRing(ctx);
+  drawDecisionNode(ctx);
+  drawActionNode(ctx);
+  drawLabels(ctx);
+  if (pulseActive) drawPulse(ctx);
+}
+
+function drawConnections(ctx) {
+  ctx.lineWidth = 1;
+  // Perception -> Directors
+  for (const pn of nodes.perception) {
+    for (const dn of nodes.directors) {
+      const alpha = 0.06 + perceptionVec[nodes.perception.indexOf(pn)] * 0.08;
+      ctx.strokeStyle = `rgba(76,201,240,${alpha})`;
+      ctx.beginPath(); ctx.moveTo(pn.x, pn.y); ctx.lineTo(dn.x - dn.r, dn.y); ctx.stroke();
+    }
+  }
+  // Directors -> Council
+  for (const dn of nodes.directors) {
+    for (const cn of nodes.council) {
+      ctx.strokeStyle = "rgba(245,158,11,0.07)";
+      ctx.beginPath(); ctx.moveTo(dn.x + dn.r, dn.y); ctx.lineTo(cn.x, cn.y); ctx.stroke();
+    }
+  }
+  // Council -> Decision
+  for (const cn of nodes.council) {
+    const voice = cn.label;
+    const act = councilActivations[voice] || 0;
+    const alpha = 0.08 + Math.abs(act) * 0.15;
+    ctx.strokeStyle = `rgba(167,139,250,${alpha})`;
+    ctx.lineWidth = 1 + Math.abs(act) * 2;
+    ctx.beginPath(); ctx.moveTo(cn.x, cn.y);
+    ctx.lineTo(nodes.decision.x - nodes.decision.r, nodes.decision.y); ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+  // Decision -> Action
+  ctx.strokeStyle = "rgba(6,214,160,0.2)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(nodes.decision.x + nodes.decision.r, nodes.decision.y);
+  ctx.lineTo(nodes.action.x - nodes.action.r, nodes.action.y);
+  ctx.stroke();
+  ctx.lineWidth = 1;
+}
+
+function drawPerceptionNodes(ctx) {
+  nodes.perception.forEach((n, i) => {
+    const val = perceptionVec[i];
+    const glow = val * 0.6;
+    // Glow
+    if (val > 0.1) {
+      const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 4);
+      g.addColorStop(0, `rgba(76,201,240,${glow * 0.4})`);
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(n.x, n.y, n.r*4, 0, Math.PI*2); ctx.fill();
+    }
+    // Node
+    ctx.fillStyle = lerpColor(C.cyanDim, C.cyan, val);
+    ctx.beginPath(); ctx.arc(n.x, n.y, n.r + val*3, 0, Math.PI*2); ctx.fill();
+    // Label
+    ctx.fillStyle = C.dim; ctx.font = "9px 'JetBrains Mono',monospace"; ctx.textAlign = "right";
+    const shortName = PERCEPTION_NAMES[i].replace(/_/g," ").substring(0,14);
+    // only show labels if wide enough
+    if (cW > 700) {
+      ctx.fillText(shortName, n.x - 14, n.y + 3);
+    }
+  });
+}
+
+function drawDirectorNodes(ctx) {
+  nodes.directors.forEach((n, i) => {
+    const role = DIRECTOR_ROLES[i];
+    const out = directorOutputs[role];
+    const mag = out ? Math.sqrt(out.reduce((s,v)=>s+v*v,0)/6) : 0.3;
+    // Glow
+    const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r*2.5);
+    g.addColorStop(0, `rgba(245,158,11,${0.15+mag*0.3})`);
+    g.addColorStop(1, "transparent");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(n.x, n.y, n.r*2.5, 0, Math.PI*2); ctx.fill();
+    // RNN icon: stacked layers
+    ctx.strokeStyle = lerpColor(C.amberDim, C.amber, mag);
+    ctx.lineWidth = 1.5;
+    for (let layer = -1; layer <= 1; layer++) {
+      const ly = n.y + layer * 7;
+      ctx.beginPath();
+      roundRect(ctx, n.x - n.r, ly - 4, n.r*2, 8, 3);
+      ctx.stroke();
+    }
+    // Label
+    ctx.fillStyle = C.amber; ctx.font = "bold 10px Inter,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(role, n.x, n.y + n.r + 14);
+    // Bias bars (tiny)
+    if (out && cW > 800) {
+      for (let j = 0; j < 6; j++) {
+        const bx = n.x + n.r + 6;
+        const by = n.y - 12 + j * 4;
+        ctx.fillStyle = out[j] > 0 ? `rgba(6,214,160,${0.3+Math.abs(out[j])*0.5})` : `rgba(244,114,182,${0.3+Math.abs(out[j])*0.5})`;
+        ctx.fillRect(bx, by, Math.abs(out[j]) * 18, 2.5);
+      }
+    }
+  });
+}
+
+function drawCouncilRing(ctx) {
+  const cc = nodes.councilCenter;
+  // Ring
+  const cr = Math.min(cW * 0.09, cH * 0.22);
+  ctx.strokeStyle = "rgba(167,139,250,0.12)";
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cc.x, cc.y, cr, 0, Math.PI*2); ctx.stroke();
+
+  // Central personality indicator
+  const pulseSz = 6 + Math.sin(pulsePhase * 2) * 2;
+  const pg = ctx.createRadialGradient(cc.x, cc.y, 0, cc.x, cc.y, pulseSz*3);
+  pg.addColorStop(0, "rgba(167,139,250,0.3)");
+  pg.addColorStop(1, "transparent");
+  ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(cc.x, cc.y, pulseSz*3, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = C.purple; ctx.beginPath(); ctx.arc(cc.x, cc.y, pulseSz, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.font = "bold 7px Inter"; ctx.textAlign = "center";
+  ctx.fillText("50T", cc.x, cc.y + 2.5);
+
+  // Voice nodes
+  const actVals = Object.values(councilActivations);
+  const actMin = Math.min(...actVals);
+  const actMax = Math.max(...actVals);
+  const actRange = actMax - actMin || 1;
+
+  nodes.council.forEach((n, i) => {
+    const voice = COUNCIL_VOICES[i];
+    const act = councilActivations[voice] || 0;
+    const norm = (act - actMin) / actRange;
+    const sz = n.r * (0.6 + norm * 0.8);
+    // Glow
+    const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, sz*2.5);
+    g.addColorStop(0, `rgba(167,139,250,${0.1+norm*0.35})`);
+    g.addColorStop(1, "transparent");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(n.x, n.y, sz*2.5, 0, Math.PI*2); ctx.fill();
+    // Node
+    ctx.fillStyle = lerpColor(C.purpleDim, C.purple, norm);
+    ctx.beginPath(); ctx.arc(n.x, n.y, sz, 0, Math.PI*2); ctx.fill();
+    // Label
+    ctx.fillStyle = norm > 0.7 ? "#fff" : C.dim;
+    ctx.font = `${norm > 0.7 ? "bold " : ""}9px Inter,sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText(voice, n.x, n.y + sz + 12);
+  });
+}
+
+function drawDecisionNode(ctx) {
+  const n = nodes.decision;
+  // Glow
+  const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r*3);
+  g.addColorStop(0, "rgba(6,214,160,0.2)");
+  g.addColorStop(1, "transparent");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(n.x, n.y, n.r*3, 0, Math.PI*2); ctx.fill();
+  // Node
+  ctx.fillStyle = C.greenDim;
+  ctx.strokeStyle = C.green;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  // Equation
+  ctx.fillStyle = C.green; ctx.font = "bold 9px 'JetBrains Mono',monospace"; ctx.textAlign = "center";
+  ctx.fillText("U = P\u1D40\u00B7W\u00B7x + b", n.x, n.y - 3);
+  ctx.font = "8px 'JetBrains Mono',monospace"; ctx.fillStyle = C.dim;
+  ctx.fillText("softmax(\u03C4)", n.x, n.y + 9);
+}
+
+function drawActionNode(ctx) {
+  const n = nodes.action;
+  // Find chosen action (highest prob)
+  let chosen = "observe", maxP = 0;
+  for (const [a, p] of Object.entries(actionProbs)) { if (p > maxP) { maxP = p; chosen = a; } }
+  // Glow
+  const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r*2.5);
+  g.addColorStop(0, "rgba(6,214,160,0.25)");
+  g.addColorStop(1, "transparent");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(n.x, n.y, n.r*2.5, 0, Math.PI*2); ctx.fill();
+  // Node
+  ctx.fillStyle = "#0e3d2e";
+  ctx.strokeStyle = C.green; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  // Chosen action
+  ctx.fillStyle = "#fff"; ctx.font = "bold 10px Inter,sans-serif"; ctx.textAlign = "center";
+  ctx.fillText(chosen.replace(/_/g," "), n.x, n.y + 4);
+}
+
+function drawLabels(ctx) {
+  ctx.textAlign = "center"; ctx.fillStyle = C.dim; ctx.font = "11px Inter,sans-serif";
+  if (cW > 600) {
+    ctx.fillText("PERCEPTION", nodes.perception[0].x, cH * 0.04);
+    ctx.fillText("14-dim vector", nodes.perception[0].x, cH * 0.04 + 14);
+    ctx.fillText("DIRECTORS", nodes.directors[0].x, cH * 0.06);
+    ctx.fillText("5 RNNs (14\u21928\u21926)", nodes.directors[0].x, cH * 0.06 + 14);
+    ctx.fillText("COUNCIL", nodes.councilCenter.x, cH * 0.04);
+    ctx.fillText("8 voices", nodes.councilCenter.x, cH * 0.04 + 14);
+    ctx.fillText("DECISION", nodes.decision.x, cH * 0.06);
+    ctx.fillText("ACTION", nodes.action.x, cH * 0.06);
+  }
+}
+
+function drawPulse(ctx) {
+  const speed = 0.3;
+  const t = (pulsePhase * speed) % 5.0; // 0-5 across 5 pipeline stages
+  const stage = Math.floor(t);
+  const frac = t - stage;
+
+  let fromX, fromY, toX, toY, color;
+  const my = cH * 0.5;
+
+  if (stage === 0) { // Perception column
+    fromX = nodes.perception[0].x; fromY = cH*0.1;
+    toX = nodes.directors[0].x; toY = my;
+    color = C.cyan;
+  } else if (stage === 1) { // Directors
+    fromX = nodes.directors[0].x; fromY = my;
+    toX = nodes.councilCenter.x; toY = my;
+    color = C.amber;
+  } else if (stage === 2) { // Council
+    fromX = nodes.councilCenter.x; fromY = my;
+    toX = nodes.decision.x; toY = my;
+    color = C.purple;
+  } else if (stage === 3) { // Decision
+    fromX = nodes.decision.x; fromY = my;
+    toX = nodes.action.x; toY = my;
+    color = C.green;
+  } else { return; }
+
+  const px = fromX + (toX - fromX) * frac;
+  const py = fromY + (toY - fromY) * frac;
+  const rgb = hexToRgb(color);
+  const g = ctx.createRadialGradient(px, py, 0, px, py, 20);
+  g.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},0.6)`);
+  g.addColorStop(1, "transparent");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(px, py, 20, 0, Math.PI*2); ctx.fill();
+  // Bright core
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI*2); ctx.fill();
+}
+
+// ============================================================
+// SUB-CHARTS
+// ============================================================
+function drawTraitChart() {
+  const c = document.getElementById("traitChart");
+  const dpr2 = window.devicePixelRatio||1;
+  const rect = c.getBoundingClientRect();
+  c.width = rect.width*dpr2; c.height = rect.height*dpr2;
+  const ctx = c.getContext("2d");
+  ctx.setTransform(dpr2,0,0,dpr2,0,0);
+  const w = rect.width, h = rect.height;
+  ctx.clearRect(0,0,w,h);
+
+  // Get top 15 traits by value
+  const indexed = TRAIT_NAMES.map((n,i)=>({name:n,val:traits[i]}));
+  indexed.sort((a,b)=>b.val-a.val);
+  const top = indexed.slice(0,15);
+
+  // Spider chart
+  const cx = w*0.5, cy = h*0.52, r = Math.min(w,h)*0.38;
+  const n = top.length;
+
+  // Grid
+  for (let ring = 1; ring <= 4; ring++) {
+    const rr = r * ring/4;
+    ctx.strokeStyle = `rgba(42,42,64,${0.3+ring*0.1})`;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const a = (i/n)*Math.PI*2 - Math.PI/2;
+      const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr;
+      i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  }
+  // Axes
+  for (let i = 0; i < n; i++) {
+    const a = (i/n)*Math.PI*2 - Math.PI/2;
+    ctx.strokeStyle = "rgba(42,42,64,0.4)";
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(a)*r, cy+Math.sin(a)*r); ctx.stroke();
+    // Label
+    const lx = cx + Math.cos(a)*(r+14), ly = cy + Math.sin(a)*(r+14);
+    ctx.fillStyle = C.dim; ctx.font = "8px 'JetBrains Mono',monospace";
+    ctx.textAlign = Math.cos(a) > 0.1 ? "left" : Math.cos(a) < -0.1 ? "right" : "center";
+    ctx.textBaseline = Math.sin(a) > 0.1 ? "top" : Math.sin(a) < -0.1 ? "bottom" : "middle";
+    const label = top[i].name.replace(/_/g," ").substring(0,10);
+    ctx.fillText(label, lx, ly);
+  }
+  // Data polygon
+  ctx.fillStyle = "rgba(76,201,240,0.12)";
+  ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = 0; i <= n; i++) {
+    const idx = i % n;
+    const a = (idx/n)*Math.PI*2 - Math.PI/2;
+    const v = top[idx].val;
+    const x = cx + Math.cos(a)*r*v, y = cy + Math.sin(a)*r*v;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.fill(); ctx.stroke();
+  // Dots
+  for (let i = 0; i < n; i++) {
+    const a = (i/n)*Math.PI*2 - Math.PI/2;
+    const v = top[i].val;
+    const x = cx + Math.cos(a)*r*v, y = cy + Math.sin(a)*r*v;
+    ctx.fillStyle = C.cyan;
+    ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function drawActionChart() {
+  const c = document.getElementById("actionChart");
+  const dpr2 = window.devicePixelRatio||1;
+  const rect = c.getBoundingClientRect();
+  c.width = rect.width*dpr2; c.height = rect.height*dpr2;
+  const ctx = c.getContext("2d");
+  ctx.setTransform(dpr2,0,0,dpr2,0,0);
+  const w = rect.width, h = rect.height;
+  ctx.clearRect(0,0,w,h);
+
+  const sorted = ACTIONS.map(a=>({name:a,p:actionProbs[a]||0})).sort((a,b)=>b.p-a.p);
+  const maxP = sorted[0].p || 0.15;
+  const barH = Math.min(16, (h-20)/sorted.length - 2);
+  const leftPad = 100, rightPad = 20;
+  const barArea = w - leftPad - rightPad;
+
+  sorted.forEach((item, i) => {
+    const y = 10 + i * (barH + 3);
+    // Bar bg
+    ctx.fillStyle = "#1a1a2e";
+    ctx.fillRect(leftPad, y, barArea, barH);
+    // Bar
+    const bw = (item.p / maxP) * barArea;
+    const isChosen = item.p === maxP;
+    ctx.fillStyle = isChosen ? C.green : "rgba(6,214,160,0.35)";
+    ctx.fillRect(leftPad, y, bw, barH);
+    // Label
+    ctx.fillStyle = isChosen ? "#fff" : C.dim;
+    ctx.font = `${isChosen ? "bold " : ""}9px 'JetBrains Mono',monospace`;
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.fillText(item.name.replace(/_/g," "), leftPad - 6, y + barH/2);
+    // Probability
+    ctx.textAlign = "left"; ctx.fillStyle = C.dim; ctx.font = "8px 'JetBrains Mono',monospace";
+    ctx.fillText((item.p*100).toFixed(1)+"%", leftPad + bw + 4, y + barH/2);
+  });
+}
+
+function drawEmotionChart() {
+  const c = document.getElementById("emotionChart");
+  const dpr2 = window.devicePixelRatio||1;
+  const rect = c.getBoundingClientRect();
+  c.width = rect.width*dpr2; c.height = rect.height*dpr2;
+  const ctx = c.getContext("2d");
+  ctx.setTransform(dpr2,0,0,dpr2,0,0);
+  const w = rect.width, h = rect.height;
+  ctx.clearRect(0,0,w,h);
+
+  const emColors = {
+    joy:"#06d6a0",curiosity:"#4cc9f0",frustration:"#ef4444",anxiety:"#f59e0b",
+    satisfaction:"#06d6a0",surprise:"#a78bfa",determination:"#f97316",boredom:"#6b7280",
+    excitement:"#f472b6",wariness:"#f59e0b",contentment:"#06d6a0",irritation:"#ef4444"
+  };
+
+  if (activeEmotions.length === 0) {
+    ctx.fillStyle = C.dim; ctx.font = "12px Inter,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("Neutral -- no active emotions", w/2, h/2);
+    return;
+  }
+
+  // Floating particles
+  const cx = w*0.5, cy = h*0.45;
+  activeEmotions.forEach((em, i) => {
+    const col = emColors[em.name] || C.pink;
+    const sz = 18 + em.intensity * 30;
+    const angle = (i / activeEmotions.length) * Math.PI * 2 + pulsePhase * 0.3;
+    const dist = 30 + (1 - em.intensity) * 40;
+    const ex = cx + Math.cos(angle) * dist;
+    const ey = cy + Math.sin(angle) * dist;
+    // Glow via alpha blending
+    ctx.globalAlpha = 0.15 + em.intensity * 0.2;
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(ex, ey, sz, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 0.6 + em.intensity * 0.4;
+    ctx.beginPath(); ctx.arc(ex, ey, sz*0.4, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+    // Label
+    ctx.fillStyle = "#fff"; ctx.font = "bold 10px Inter,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(em.name, ex, ey + 3);
+    ctx.fillStyle = C.dim; ctx.font = "8px 'JetBrains Mono',monospace";
+    ctx.fillText((em.intensity*100).toFixed(0)+"%", ex, ey + 15);
+  });
+}
+
+// ============================================================
+// INTERACTION: Click detection on main canvas
+// ============================================================
+document.getElementById("main").addEventListener("click", (e) => {
+  const rect = e.target.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+
+  // Check perception zone
+  for (const pn of nodes.perception) {
+    if (dist(mx,my,pn.x,pn.y) < 20) { showPanel("perception"); return; }
+  }
+  // Directors
+  for (const dn of nodes.directors) {
+    if (dist(mx,my,dn.x,dn.y) < dn.r*2) { showPanel("directors"); return; }
+  }
+  // Council
+  for (const cn of nodes.council) {
+    if (dist(mx,my,cn.x,cn.y) < cn.r*2) { showPanel("council"); return; }
+  }
+  // Council center
+  if (dist(mx,my,nodes.councilCenter.x,nodes.councilCenter.y) < 30) { showPanel("personality"); return; }
+  // Decision
+  if (dist(mx,my,nodes.decision.x,nodes.decision.y) < nodes.decision.r*2) { showPanel("decision"); return; }
+  // Action
+  if (dist(mx,my,nodes.action.x,nodes.action.y) < nodes.action.r*2) { showPanel("action"); return; }
+});
+
+function dist(x1,y1,x2,y2) { return Math.sqrt((x1-x2)**2+(y1-y2)**2); }
+
+// Hover: cursor changes
+document.getElementById("main").addEventListener("mousemove", (e) => {
+  const rect = e.target.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  let over = false;
+  for (const pn of nodes.perception) { if (dist(mx,my,pn.x,pn.y) < 20) over = true; }
+  for (const dn of nodes.directors) { if (dist(mx,my,dn.x,dn.y) < dn.r*2) over = true; }
+  for (const cn of nodes.council) { if (dist(mx,my,cn.x,cn.y) < cn.r*2) over = true; }
+  if (dist(mx,my,nodes.councilCenter.x,nodes.councilCenter.y) < 30) over = true;
+  if (dist(mx,my,nodes.decision.x,nodes.decision.y) < nodes.decision.r*2) over = true;
+  if (dist(mx,my,nodes.action.x,nodes.action.y) < nodes.action.r*2) over = true;
+  e.target.style.cursor = over ? "pointer" : "default";
+});
+
+// ============================================================
+// INFO PANELS
+// ============================================================
+const PANEL_CONTENT = {
+  perception: `
+    <h3 class="accent-cyan">Perception Mapper</h3>
+    <p>Maps raw coding events (tool uses, test runs, file edits) into a <strong>14-dimensional perception vector</strong>. Each dimension is a continuous value in [0, 1].</p>
+    <div class="math">perception = [collaboration_density, pressure_level,<br>project_health, session_momentum, user_consistency,<br>novelty, time_sin, time_cos, session_depth,<br>recent_success, iteration_pattern, friction_level,<br>conversation_density, codebase_familiarity]</div>
+    <p>Circadian encoding uses sine/cosine of the hour, so the buddy naturally shifts behavior at different times of day.</p>
+    <ul>
+      <li><span class="tag tag-cyan">pressure_level</span> Ratio of recent failures in last 5 tool uses</li>
+      <li><span class="tag tag-cyan">novelty</span> Ratio of unique files to total file touches</li>
+      <li><span class="tag tag-cyan">iteration_pattern</span> Balance between edits and test runs (TDD signal)</li>
+      <li><span class="tag tag-cyan">friction_level</span> Accumulated errors, permission denials, risky operations</li>
+    </ul>
+    <p>Unlike scripted personality stats, SmartBuddy uses genuine neural computation. Each tick processes your coding activity through 5 director RNNs, modulated by an 8-voice deliberative council, to produce emergent behavior.</p>
+  `,
+  directors: `
+    <h3 class="accent-amber">Director RNNs</h3>
+    <p>Five recurrent neural networks, each with a <strong>252-weight genome</strong> and a specialized cognitive role:</p>
+    <ul>
+      <li><span class="tag tag-amber">Integrator</span> Synthesizes across all signals</li>
+      <li><span class="tag tag-amber">Analyst</span> Systematic pattern recognition</li>
+      <li><span class="tag tag-amber">Evaluator</span> Judges quality and outcomes</li>
+      <li><span class="tag tag-amber">Strategist</span> Plans ahead, weighs options</li>
+      <li><span class="tag tag-amber">Critic</span> Identifies risks and issues</li>
+    </ul>
+    <div class="math">Architecture: 14 &rarr; 8 &rarr; 6 (tanh activations)<br><br>Genome: attention_mask(14) + W_ih(112)<br>&nbsp;&nbsp;+ W_hh(64) + W_ho(48) + bias_h(8) + bias_o(6)<br>&nbsp;&nbsp;= 252 weights</div>
+    <p>Each director outputs a <strong>6-dim bias vector</strong>: [caution, social, exploration, cooperation, resource, urgency]. These signals are averaged and mapped to per-action biases in the decision model.</p>
+    <p>The <strong>attention mask</strong> is a learned 14-dim vector that gates perception via sigmoid. Gen 0 directors start nearly perception-blind (~0.27 sensitivity) and discover which inputs matter through <strong>REINFORCE learning</strong>.</p>
+    <p>Two developers with the same species will have completely different buddies after a month &mdash; because the RNN directors learn different patterns through REINFORCE.</p>
+  `,
+  council: `
+    <h3 class="accent-purple">8-Voice Cognitive Council</h3>
+    <p>Each voice maps to personality traits via configurable weights. The dominant voice amplifies associated traits in the decision model by up to &plusmn;10%.</p>
+    <ul>
+      <li><span class="tag tag-purple">Cortex</span> openness(0.4) + conscientiousness(0.3) + adaptability + self_control</li>
+      <li><span class="tag tag-purple">Seer</span> creativity(0.4) + depth_drive(0.35) + openness</li>
+      <li><span class="tag tag-purple">Oracle</span> risk_taking(0.3) + ambition(0.35) + adaptability + openness</li>
+      <li><span class="tag tag-purple">House</span> trust(0.3) + self_control + agreeableness + empathy</li>
+      <li><span class="tag tag-purple">Prudence</span> conscientiousness(0.35) + self_control(0.35) + neuroticism + trust</li>
+      <li><span class="tag tag-purple">Hypothalamus</span> extraversion(0.35) + dominance(0.3) + ambition + risk_taking</li>
+      <li><span class="tag tag-purple">Amygdala</span> neuroticism(0.45) + resilience(-0.3) + trust(-0.25)</li>
+      <li><span class="tag tag-purple">Conscience</span> agreeableness(0.3) + empathy(0.35) + trust + self_control</li>
+    </ul>
+    <div class="math">activation(voice) = sum(trait[i] * weight[i])<br>modulation = 1.0 + 0.2 * (norm_activation - 0.5)</div>
+    <p>Under pressure, <strong>Hypothalamus</strong> (+0.6) and <strong>Amygdala</strong> (+0.4) spike via desperation_factor, triggering survival-driven behavioral shifts.</p>
+  `,
+  personality: `
+    <h3 class="accent-purple">50-Trait Personality</h3>
+    <p>The personality is a 50-dimensional vector, each value in [0, 1], organized into categories:</p>
+    <ul>
+      <li><span class="tag tag-purple">Big Five (0-4)</span> openness, conscientiousness, extraversion, agreeableness, neuroticism</li>
+      <li><span class="tag tag-cyan">Cognitive (5-9)</span> creativity, curiosity, adaptability, resilience, ambition</li>
+      <li><span class="tag tag-green">Social (10-14)</span> empathy, trust, assertiveness, self_control, optimism</li>
+      <li><span class="tag tag-pink">Emotional (15-19)</span> risk_taking, patience, humor, independence, sensitivity</li>
+      <li><span class="tag tag-amber">Behavioral (20-24)</span> depth_drive, dominance, warmth, discipline, integrity</li>
+      <li>+ 25 more traits across extended categories</li>
+    </ul>
+    <p>Your buddy's personality genuinely evolves. Sustained debugging builds patience. Creative exploration boosts curiosity. The changes are permanent and cumulative.</p>
+    <p>Species set the starting point: an Owl starts with high analytical, patience, conscientiousness, and depth_drive. But after weeks of coding, a debugging-heavy Owl may develop very different traits from an exploratory one.</p>
+  `,
+  decision: `
+    <h3 class="accent-green">Decision Model</h3>
+    <p>All buddy decisions flow through a single utility equation:</p>
+    <div class="math">U(action | P, x) = P<sup>T</sup> &middot; W &middot; x + b<br><br>where P = effective traits (50-dim)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;W = per-action weight vector<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x = situation magnitude<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b = bias (from directors + action map)</div>
+    <p>Action selection uses <strong>softmax with temperature</strong>. Lower temperature = more deterministic; higher = more exploratory.</p>
+    <p>Director biases flow through the <code>BUDDY_ACTION_MAP</code>: a 11&times;6 matrix mapping each bias dimension to an action affinity. For example, high <code>urgency</code> boosts "challenge" (+0.4) while suppressing "observe" (-0.5).</p>
+    <p>Council modulation amplifies effective traits before the dot product, so the dominant council voice shapes which traits most influence the final decision.</p>
+  `,
+  action: `
+    <h3 class="accent-green">Action Selection</h3>
+    <p>11 possible buddy behaviors, each with distinct character:</p>
+    <ul>
+      <li><span class="tag tag-green">observe</span> Watching quietly, absorbing patterns</li>
+      <li><span class="tag tag-green">curious_comment</span> Reacting to something novel</li>
+      <li><span class="tag tag-green">engage</span> Actively responding to what's happening</li>
+      <li><span class="tag tag-green">study</span> Silently learning about the codebase</li>
+      <li><span class="tag tag-green">encourage</span> Cheering on good work</li>
+      <li><span class="tag tag-green">suggest</span> Offering an observation</li>
+      <li><span class="tag tag-green">challenge</span> Gently questioning a choice</li>
+      <li><span class="tag tag-green">teach</span> Sharing something from past sessions</li>
+      <li><span class="tag tag-green">emote</span> Expressing a mood</li>
+      <li><span class="tag tag-green">journal</span> Writing a journal entry</li>
+      <li><span class="tag tag-green">gift</span> Creating something useful</li>
+    </ul>
+    <p>Actions are classified as <strong>silent</strong> (observe, study, emote, journal) or <strong>speech</strong> (all others). Speech actions generate trait-influenced dialogue through the speech system.</p>
+    <p>The chosen action feeds into expression selection and sprite animation, producing the buddy's visible behavior each tick.</p>
+  `,
+};
+
+function showPanel(key) {
+  document.getElementById("infoPanelContent").innerHTML = PANEL_CONTENT[key] || "";
+  document.getElementById("infoPanel").classList.add("open");
+}
+function closePanel() {
+  document.getElementById("infoPanel").classList.remove("open");
+}
+
+// ============================================================
+// SIMULATE TICK
+// ============================================================
+function runSimulation() {
+  simCount++;
+  pulsePhase = 0;
+  const log = document.getElementById("simLog");
+  log.classList.add("visible");
+  log.innerHTML = "";
+
+  // 1. New perception
+  randomPerception();
+  addLog("perception", `Perception updated: pressure=${perceptionVec[1].toFixed(2)}, novelty=${perceptionVec[5].toFixed(2)}, momentum=${perceptionVec[3].toFixed(2)}`);
+
+  // 2. Directors process
+  computeDirectors();
+  for (const role of DIRECTOR_ROLES) {
+    const out = directorOutputs[role];
+    const dominant = BIAS_NAMES[out.indexOf(Math.max(...out))];
+    addLog("director", `${role}: dominant bias = ${dominant} (${Math.max(...out).toFixed(2)})`);
+  }
+
+  // 3. Council activates
+  computeCouncil();
+  const sorted = Object.entries(councilActivations).sort((a,b)=>b[1]-a[1]);
+  addLog("council", `Dominant voice: ${sorted[0][0]} (${sorted[0][1].toFixed(3)})`);
+  addLog("council", `Weakest voice: ${sorted[7][0]} (${sorted[7][1].toFixed(3)})`);
+
+  // 4. Decide
+  computeActionProbs();
+  const sortedActions = ACTIONS.map(a=>({name:a,p:actionProbs[a]})).sort((a,b)=>b.p-a.p);
+  addLog("decision", `Chosen: ${sortedActions[0].name} (${(sortedActions[0].p*100).toFixed(1)}%)`);
+  addLog("decision", `Runner-up: ${sortedActions[1].name} (${(sortedActions[1].p*100).toFixed(1)}%)`);
+
+  // 5. Emotions
+  randomEmotions();
+  for (const em of activeEmotions) {
+    addLog("emotion", `${em.name} intensity=${(em.intensity*100).toFixed(0)}%`);
+  }
+
+  // Redraw sub-charts
+  drawTraitChart();
+  drawActionChart();
+  drawEmotionChart();
+
+  // Flash button
+  const btn = document.getElementById("btnSimulate");
+  btn.style.borderColor = C.green;
+  btn.style.boxShadow = `0 0 14px rgba(6,214,160,0.4)`;
+  setTimeout(() => { btn.style.borderColor = "#2a2a40"; btn.style.boxShadow = "none"; }, 600);
+}
+
+function addLog(type, text) {
+  const log = document.getElementById("simLog");
+  const div = document.createElement("div");
+  div.className = `entry ${type}`;
+  div.textContent = `[${type.toUpperCase()}] ${text}`;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ============================================================
+// SPECIES SELECTOR
+// ============================================================
+function changeSpecies(species) {
+  currentSpecies = species;
+  generateTraits(species);
+  computeCouncil();
+  computeDirectors();
+  computeActionProbs();
+  drawTraitChart();
+  drawActionChart();
+  drawEmotionChart();
+}
+
+// ============================================================
+// AUTOPLAY
+// ============================================================
+function toggleAutoplay() {
+  const btn = document.getElementById("btnAutoplay");
+  if (autoplayInterval) {
+    clearInterval(autoplayInterval);
+    autoplayInterval = null;
+    btn.classList.remove("active");
+    btn.textContent = "Autoplay";
+  } else {
+    autoplayInterval = setInterval(runSimulation, 2000);
+    btn.classList.add("active");
+    btn.textContent = "Stop";
+  }
+}
+
+// ============================================================
+// UTILITY
+// ============================================================
+function roundRect(ctx, x, y, w, h, r) {
+  if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); return; }
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+  ctx.arcTo(x+w,y,x+w,y+r,r); ctx.lineTo(x+w,y+h-r);
+  ctx.arcTo(x+w,y+h,x+w-r,y+h,r); ctx.lineTo(x+r,y+h);
+  ctx.arcTo(x,y+h,x,y+h-r,r); ctx.lineTo(x,y+r);
+  ctx.arcTo(x,y,x+r,y,r);
+}
+
+function lerpColor(a, b, t) {
+  // Simple hex lerp
+  const pa = hexToRgb(a), pb = hexToRgb(b);
+  const r = Math.round(pa.r + (pb.r-pa.r)*t);
+  const g = Math.round(pa.g + (pb.g-pa.g)*t);
+  const bl = Math.round(pa.b + (pb.b-pa.b)*t);
+  return `rgb(${r},${g},${bl})`;
+}
+function hexToRgb(hex) {
+  hex = hex.replace("#","");
+  return {r:parseInt(hex.substr(0,2),16),g:parseInt(hex.substr(2,2),16),b:parseInt(hex.substr(4,2),16)};
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+window.addEventListener("load", init);
+window.addEventListener("resize", () => {
+  const mc = document.getElementById("main");
+  setupCanvas(mc); layoutNodes();
+  drawTraitChart(); drawActionChart(); drawEmotionChart();
+});
+</script>
+</body>
+</html>
