@@ -1,14 +1,16 @@
 #!/usr/bin/env node
-// SmartBuddy statusline — shows your companion's mood and traits
-// Reads mind.json and displays buddy state alongside model/context info.
+// SmartBuddy statusline — shows your companion as a persistent sprite
+// with speech bubble, mood, and traits above the model/context bar.
 
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const MIND_PATH = path.join(process.env.CLAUDE_PLUGIN_DATA || path.join(os.homedir(), '.smartbuddy'), 'mind.json');
+const stateDir = process.env.CLAUDE_PLUGIN_DATA || path.join(os.homedir(), '.smartbuddy');
+const MIND_PATH = path.join(stateDir, 'mind.json');
+const TICK_PATH = path.join(stateDir, 'last_tick.json');
 
-// Trait index → name (subset needed for display)
+// Trait index → name
 const TRAIT_NAMES = [
   'openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism',
   'creativity', 'curiosity', 'adaptability', 'resilience', 'ambition',
@@ -22,49 +24,57 @@ const TRAIT_NAMES = [
   'tolerance', 'expressiveness', 'stoicism', 'spirituality', 'playfulness',
 ];
 
-// Species → display character
+// Species → emoji
 const SPECIES_ICON = {
-  axolotl: '\u{1F9EA}',     // test tube (closest to axolotl in common terminals)
-  cat: '\u{1F431}',
-  dog: '\u{1F436}',
-  fox: '\u{1F98A}',
-  owl: '\u{1F989}',
-  cactus: '\u{1F335}',
-  mushroom: '\u{1F344}',
-  octopus: '\u{1F419}',
-  penguin: '\u{1F427}',
-  parrot: '\u{1F99C}',
-  chameleon: '\u{1F98E}',
-  turtle: '\u{1F422}',
-  dolphin: '\u{1F42C}',
-  butterfly: '\u{1F98B}',
-  firefly: '\u{2728}',
-  mantis: '\u{1FAB2}',
-  raven: '\u{1F426}',
-  wolf: '\u{1F43A}',
+  duck: '\u{1F986}', goose: '\u{1FA86}', cat: '\u{1F431}', rabbit: '\u{1F430}',
+  owl: '\u{1F989}', penguin: '\u{1F427}', turtle: '\u{1F422}', snail: '\u{1F40C}',
+  dragon: '\u{1F409}', octopus: '\u{1F419}', axolotl: '\u{1F9EA}', ghost: '\u{1F47B}',
+  robot: '\u{1F916}', blob: '\u{1FAE0}', cactus: '\u{1F335}', mushroom: '\u{1F344}',
+  chonk: '\u{1F43E}', capybara: '\u{1F9AB}',
 };
 
-// Mood → icon
+// Mood → emoji
 const MOOD_ICON = {
-  curiosity: '\u{1F50D}',
-  joy: '\u{2728}',
-  contentment: '\u{1F33F}',
-  excitement: '\u{26A1}',
-  frustration: '\u{1F4A2}',
-  boredom: '\u{1F971}',
-  anxiety: '\u{1F4AD}',
-  pride: '\u{1F451}',
-  surprise: '\u{2757}',
+  curiosity: '\u{1F50D}', joy: '\u{2728}', contentment: '\u{1F33F}',
+  excitement: '\u{26A1}', frustration: '\u{1F4A2}', boredom: '\u{1F971}',
+  anxiety: '\u{1F4AD}', surprise: '\u{2757}', determination: '\u{1F4AA}',
+  wariness: '\u{1F440}', satisfaction: '\u{1F60C}', irritation: '\u{1F612}',
   neutral: '\u{1F7E2}',
+};
+
+// Expression → eyes
+const EXPRESSIONS = {
+  neutral: '. .', happy: '^ ^', focused: '- -', surprised: 'O O',
+  skeptical: '> .', tired: '~ ~', excited: '* *', side_glance: '. \u00b7',
+};
+
+// Sprite templates (5 rows x 3 frames each) — {E} is eye placeholder
+const SPRITES = {
+  cat:      [' /\\_/\\ ', '( {E} )', ' > ^ < ', ' /| |\\ ', '(_| |_)'],
+  duck:     ['  __   ', ' ({E}) ', '  )>   ', ' / |   ', '(_/    '],
+  goose:    ['  __   ', ' ({E}) ', '  )>   ', ' // |  ', '((_/   '],
+  dragon:   [' /\\/\\  ', '({E} ) ', ' >===< ', ' | /|  ', ' |/ |~ '],
+  axolotl:  ['\\~ ~/ ', '({E} )', ' \\==/ ', ' /||\\  ', '~ /\\ ~'],
+  rabbit:   [' |\\ /| ', ' ({E}) ', '  \\_/  ', '  | |  ', '  (_)  '],
+  owl:      [' {===} ', '({E}  )', ' |-v-| ', ' /| |\\ ', '/_| |_\\'],
+  penguin:  ['  ._,  ', ' ({E}) ', ' /|  |\\', '  |  |  ', '  <  >  '],
+  turtle:   ['   __  ', '__({E})', '/===== ', '|_.-._|', ' _/ \\_ '],
+  snail:    ['   __  ', '  ({E})', ' /@@@@\\', '|@@@@@ ', '~~~~~~~'],
+  octopus:  ['  ___  ', ' ({E}) ', ' /| |\\ ', '/ | | \\', '~^~^~^~'],
+  ghost:    ['  ___  ', ' ({E}) ', ' |   | ', ' |   | ', ' /\\/\\/\\'],
+  robot:    ['[=====]', '[{E}  ]', '  |-|  ', ' [===] ', ' _| |_ '],
+  blob:     ['       ', '  ___  ', ' ({E}) ', ' /   \\ ', '(_____)'],
+  cactus:   ['  | |  ', ' ({E}) ', '-| | |-', ' | | | ', ' \\___/ '],
+  mushroom: [' .oOo. ', '(oOoOo)', ' ({E}) ', '  | |  ', ' /___\\ '],
+  chonk:    ['  ___  ', ' ({E}) ', '/=====\\', '|=====|', '(_____)'],
+  capybara: [' ____  ', '({E} ) ', ' \\--/  ', ' /|  |\\', '(_|  |_)'],
 };
 
 function getDominantEmotion(mind) {
   const states = mind.emotional_states || [];
   const tick = mind.tick_count || 0;
-  // Filter active emotions
   const active = states.filter(s => (tick - s.tick_created) < s.decay_ticks);
   if (active.length === 0) return 'neutral';
-  // Pick highest intensity
   active.sort((a, b) => b.intensity - a.intensity);
   return active[0].emotion;
 }
@@ -75,7 +85,13 @@ function getTopTrait(traits) {
   for (let i = 1; i < traits.length; i++) {
     if (traits[i] > traits[maxIdx]) maxIdx = i;
   }
-  return { name: TRAIT_NAMES[maxIdx] || '?', value: traits[maxIdx] };
+  return TRAIT_NAMES[maxIdx] || '?';
+}
+
+function renderSprite(species, expression) {
+  const template = SPRITES[species] || SPRITES.cat;
+  const eyes = EXPRESSIONS[expression] || EXPRESSIONS.neutral;
+  return template.map(row => row.replace('{E}', eyes));
 }
 
 // Read stdin (Claude Code passes session data)
@@ -90,7 +106,7 @@ process.stdin.on('end', () => {
     const model = data.model?.display_name || 'Claude';
     const remaining = data.context_window?.remaining_percentage;
 
-    // Context bar (same logic as GSD statusline)
+    // Context bar
     const AUTO_COMPACT_BUFFER_PCT = 16.5;
     let ctx = '';
     if (remaining != null) {
@@ -110,26 +126,73 @@ process.stdin.on('end', () => {
     }
 
     // Read buddy state
-    let buddyStr = '';
-    if (fs.existsSync(MIND_PATH)) {
-      try {
-        const mind = JSON.parse(fs.readFileSync(MIND_PATH, 'utf8'));
-        const species = mind.species || 'buddy';
-        const icon = SPECIES_ICON[species] || '\u{1F43E}';
-        const mood = getDominantEmotion(mind);
-        const moodIcon = MOOD_ICON[mood] || '\u{1F7E2}';
-        const top = getTopTrait(mind.traits);
-        // Only show top trait if it differs from mood
-        const topStr = (top && top.name !== mood) ? ` \x1b[2m\u00b7 ${top.name}\x1b[0m` : '';
+    if (!fs.existsSync(MIND_PATH)) {
+      // No buddy yet — just show model info
+      process.stdout.write(`\x1b[2m${model}\x1b[0m${ctx}`);
+      return;
+    }
 
-        const name = mind.name || species;
-        buddyStr = `${icon} \x1b[1;35m${name}\x1b[0m \x1b[2mthe ${species}\x1b[0m ${moodIcon} ${mood}${topStr} \x1b[2m\u2502\x1b[0m `;
-      } catch (e) {
-        // Buddy not hatched yet
+    const mind = JSON.parse(fs.readFileSync(MIND_PATH, 'utf8'));
+    const species = mind.species || 'buddy';
+    const icon = SPECIES_ICON[species] || '\u{1F43E}';
+    const mood = getDominantEmotion(mind);
+    const moodIcon = MOOD_ICON[mood] || '\u{1F7E2}';
+    const topTrait = getTopTrait(mind.traits);
+    const name = mind.name || species;
+
+    // Read last tick for expression and speech
+    let expression = 'neutral';
+    let speech = '';
+    let action = '';
+    if (fs.existsSync(TICK_PATH)) {
+      try {
+        const tick = JSON.parse(fs.readFileSync(TICK_PATH, 'utf8'));
+        expression = tick.expression || 'neutral';
+        speech = tick.speech || '';
+        action = tick.action || '';
+      } catch { /* ignore */ }
+    }
+
+    // Map mood to expression if no tick yet
+    if (expression === 'neutral' && mood !== 'neutral') {
+      if (mood === 'joy') expression = 'happy';
+      else if (mood === 'curiosity') expression = 'excited';
+      else if (mood === 'frustration') expression = 'focused';
+      else if (mood === 'excitement') expression = 'excited';
+    }
+
+    // Render sprite
+    const sprite = renderSprite(species, expression);
+
+    // Build speech bubble (max 30 chars to fit)
+    let bubble = '';
+    if (speech) {
+      const trimmed = speech.length > 28 ? speech.slice(0, 27) + '\u2026' : speech;
+      bubble = `\x1b[2;3m"${trimmed}"\x1b[0m`;
+    }
+
+    // Format: sprite on left, speech bubble to the right of sprite row 2
+    // Then status line at the bottom
+    const dim = '\x1b[2m';
+    const reset = '\x1b[0m';
+    const purple = '\x1b[35m';
+
+    const lines = [];
+    for (let i = 0; i < sprite.length; i++) {
+      const spriteStr = `${purple}${sprite[i]}${reset}`;
+      if (i === 1 && bubble) {
+        // Speech bubble next to the face
+        lines.push(`${spriteStr}  ${bubble}`);
+      } else {
+        lines.push(spriteStr);
       }
     }
 
-    process.stdout.write(`${buddyStr}\x1b[2m${model}\x1b[0m${ctx}`);
+    // Status info line
+    const statusLine = `${icon} \x1b[1;35m${name}${reset} ${dim}the ${species}${reset} ${moodIcon} ${mood} ${dim}\u00b7 ${topTrait} \u2502${reset} ${dim}${model}${reset}${ctx}`;
+    lines.push(statusLine);
+
+    process.stdout.write(lines.join('\n'));
   } catch (e) {
     // Silent fail
   }
