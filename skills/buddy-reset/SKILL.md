@@ -5,10 +5,8 @@ description: Factory reset your buddy — keep species, wipe all learned behavio
 
 # Buddy Reset
 
-**This is destructive.** Before proceeding, warn the user:
+**This is destructive.** Warn the user:
 
-"This will erase all of your buddy's learned behavior — their evolved traits, memories, emotional history, and earned adornments. They'll keep their species but start with a fresh mind. Are you sure?"
+"This will erase all of your buddy's learned behavior — traits, memories, emotional history, and adornments. They'll keep their species but start with a fresh mind. Are you sure?"
 
-Wait for explicit confirmation. Then use the `buddy_reset` MCP tool.
-
-After reset, show the buddy's fresh state.
+Wait for explicit confirmation. Then delete the mind.json file (its path is in your context under `[SMARTBUDDY_FULL_STATE]` → "State file:"). The next tool use will trigger a fresh hatch.

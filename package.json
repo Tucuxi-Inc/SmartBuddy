@@ -1,0 +1,16 @@
+{
+  "name": "smartbuddy",
+  "version": "0.2.0",
+  "description": "A cognitive coding companion that actually thinks",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^5.4",
+    "vitest": "^1.0"
+  }
+}

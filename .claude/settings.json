@@ -1,0 +1,31 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node hooks/statusline.cjs"
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node dist/hooks-src/on-prompt-submit.js",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|Read|Glob|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node dist/hooks-src/on-tool-use.js",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

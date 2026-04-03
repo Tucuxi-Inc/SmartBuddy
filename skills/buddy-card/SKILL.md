@@ -5,13 +5,15 @@ description: Show your buddy's full stat card with traits, emotions, and evoluti
 
 # Buddy Card
 
-Use the `buddy_card` MCP tool to get the full stat card. Display it as a formatted card showing:
+The buddy's full state is already in your context — look for the `[SMARTBUDDY_FULL_STATE]` block. Format a stat card from it showing:
 
-1. **Species** and tick count (how long they've been alive)
-2. **Top 10 traits** with current values and shift from creation (show as +/- delta)
-3. **Active emotions** with intensity
-4. **Recent evolution events** (what triggers fired)
-5. **Earned adornments** with descriptions of how they were earned
-6. **Council activations** — which voices are most active
+1. **Name, species**, and tick count
+2. **Sprite** — the ASCII art from "Current appearance"
+3. **Top 10 traits** as a table with current values and shifts from creation
+4. **Active emotions** with intensity
+5. **Active personality shifts** if any traits show non-zero shift values
+6. **Council activations** — which voices are dominant
+7. **Evolution history** — triggers that fired
+8. **Earned adornments**
 
-Format it nicely with aligned columns. This is the buddy's identity card.
+Do NOT read mind.json from disk — everything you need is in your context.

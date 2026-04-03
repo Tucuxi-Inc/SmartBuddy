@@ -1,15 +1,21 @@
+# Node
+node_modules/
+
+# Python (legacy, preserved in v0.1.0 tag)
 __pycache__/
 *.py[cod]
 *.egg-info/
-dist/
-build/
 .eggs/
 *.egg
 .venv/
 venv/
+.pytest_cache/
+smartbuddy_engine.egg-info/
+
+# Environment
 .env
 .DS_Store
 *.swp
 *.swo
-.pytest_cache/
-smartbuddy_engine.egg-info/
+
+# Note: dist/ is NOT ignored — committed for zero-build install
