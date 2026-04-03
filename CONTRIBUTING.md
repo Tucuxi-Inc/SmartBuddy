@@ -2,74 +2,67 @@
 
 SmartBuddy is a Claude Code plugin that gives your coding companion a real cognitive engine -- 50-trait personality, RNN directors, 8-voice council, and emotions that decay naturally. We welcome contributions that make buddies more expressive and interesting.
 
+## Development Setup
+
+```bash
+npm install          # Install dev dependencies
+npm run build        # Compile TypeScript to dist/
+npm test             # Run all tests
+npm run test:watch   # Watch mode for development
+```
+
+Source code is in `src/`, hook handlers in `hooks-src/`, tests in `tests/`.
+
+The pre-compiled `dist/` directory is committed so end users need zero build steps. After making any changes to `src/` or `hooks-src/`, run `npm run build` to recompile before committing.
+
+## Math Reference
+
+The full mathematical specification is documented in [ARCHITECTURE.md](ARCHITECTURE.md). It contains the decision model equations, RNN architecture and weight layout, council voice weights, trait taxonomy, perception dimensions, emotion decay formulas, and evolution rules.
+
 ## What's Open for Contribution
 
 ### Sprites and Expressions
 
 Add new species-specific idle animations, expressions, or adornment visuals. The sprite system uses 5-line ASCII art with `{E}` as the eye placeholder.
 
-Expressions are driven by cognitive state. To add a new expression to the `EXPRESSIONS` dict:
+Expressions are driven by cognitive state. To add a new expression to the `EXPRESSIONS` map in `src/sprites.ts`:
 
-```python
-EXPRESSIONS = {
-    "neutral":    ". .",
-    "happy":      "^ ^",
-    "focused":    "- -",
-    "surprised":  "O O",
-    "skeptical":  "> .",
-    "tired":      "- -",
-    "excited":    "* *",
-    "side_glance": ". ·",
-    # Add yours here:
-    "confused":   "? ?",
-}
+```typescript
+export const EXPRESSIONS: Record<string, string> = {
+  neutral:    ". .",
+  happy:      "^ ^",
+  focused:    "- -",
+  surprised:  "O O",
+  // Add yours here:
+  confused:   "? ?",
+};
 ```
 
 ### Speech Templates
 
-Templates are selected by action type, active emotions, and trait thresholds. To add a new template, follow this format:
+Templates are selected by action type, active emotions, and trait thresholds. To add a new template in `src/speech.ts`:
 
-```python
+```typescript
 {
-    "action": "encourage",
-    "trait_filter": {"patience": ("high", 0.7), "expressiveness": ("low", 0.4)},
-    "emotion_filter": ["satisfaction"],
-    "text": "That took a while, but it's solid work."
+  action: "encourage",
+  traitFilter: { patience: { dir: "high", threshold: 0.7 }, expressiveness: { dir: "low", threshold: 0.4 } },
+  emotionFilter: ["satisfaction"],
+  text: "That took a while, but it's solid work."
 }
 ```
 
 - `action`: One of the 11 buddy actions (observe, curious_comment, engage, study, encourage, suggest, challenge, teach, emote, journal, gift)
-- `trait_filter`: Dict of trait_name -> (direction, threshold). "high" means trait must be above threshold; "low" means below.
-- `emotion_filter`: Optional list of emotions that should be active (or empty for any).
+- `traitFilter`: Dict of trait_name -> { dir, threshold }. "high" means trait must be above threshold; "low" means below.
+- `emotionFilter`: Optional list of emotions that should be active (or empty for any).
 - `text`: The speech bubble text. Keep it short (under 60 characters).
-
-Two buddies with the same action will say different things because different trait thresholds select different templates. The more templates you add with varied trait filters, the more personality-distinct buddy speech becomes.
 
 ### Perception Mappings
 
-Map new coding signals to the 14-dim perception vector. If you identify a useful coding signal that isn't captured (e.g., language-specific patterns, CI/CD events), propose how it maps to an existing perception dimension or suggest a dimension reuse.
+Map new coding signals to the 14-dim perception vector in `src/perception.ts`. If you identify a useful coding signal that isn't captured, propose how it maps to an existing dimension or suggest a dimension reuse.
 
 ### Evolution Triggers
 
-Add new coding patterns that trigger personality shifts. Follow the existing trigger format:
-
-```python
-EvolutionTrigger.YOUR_TRIGGER = "your_trigger"
-
-# In EVOLUTION_RULES:
-EvolutionTrigger.YOUR_TRIGGER: [
-    ("trait_name", +1, 0.02),    # direction, base_magnitude
-    ("other_trait", -1, 0.01),
-]
-```
-
-Triggers should represent sustained coding patterns, not one-off events. The shift magnitudes are tiny by design (0.01-0.03 per trigger) -- personality change is slow and genuine.
-
-### TypeScript Port
-
-The full mathematical specification is documented in [ARCHITECTURE.md](ARCHITECTURE.md). It contains the decision model equations, RNN architecture and weight layout, council voice weights, trait taxonomy, perception dimensions, emotion decay formulas, and evolution rules. You do not need access to the Python source code -- the math is fully documented for reimplementation.
-
-A TypeScript port would eliminate the Python/MCP sidecar and let SmartBuddy run natively in the Claude Code process.
+Add new coding patterns that trigger personality shifts in `src/personality-evolution.ts`. Triggers should represent sustained coding patterns, not one-off events. Shift magnitudes are tiny by design (0.01-0.03 per trigger) -- personality change is slow and genuine.
 
 ## Maintained by Tucuxi
 
