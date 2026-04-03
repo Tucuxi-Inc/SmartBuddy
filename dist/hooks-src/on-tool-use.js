@@ -1,8 +1,10 @@
 import { BuddyBrain } from "../src/brain.js";
+import * as fs from "node:fs";
 import * as path from "node:path";
 const stateDir = process.env.CLAUDE_PLUGIN_DATA ?? path.join(process.env.HOME ?? "~", ".smartbuddy");
 const userId = "default_user";
 const mindPath = path.join(stateDir, "mind.json");
+const lastTickPath = path.join(stateDir, "last_tick.json");
 let input = "";
 process.stdin.setEncoding("utf-8");
 process.stdin.on("data", (chunk) => { input += chunk; });
@@ -18,6 +20,14 @@ process.stdin.on("end", () => {
         brain.loadMind(mindPath, userId);
         const result = brain.tick({ tool_name: toolName, tool_input: toolInput, success });
         brain.saveMind(mindPath);
+        // Persist tick result so on-prompt-submit can surface the sprite + speech
+        fs.writeFileSync(lastTickPath, JSON.stringify({
+            action: result.action,
+            expression: result.expression,
+            speech: result.speech,
+            spriteFrame: result.spriteFrame,
+            councilDominant: result.councilDominant,
+        }));
     }
     catch {
         // Silent failure — don't write to stderr, it breaks hook parsing
