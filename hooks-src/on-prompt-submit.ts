@@ -1,9 +1,10 @@
 import { BuddyBrain } from "../src/brain.js";
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 
 const stateDir = process.env.CLAUDE_PLUGIN_DATA ?? path.join(process.env.HOME ?? "~", ".smartbuddy");
-const userId = "default_user";
+const userId = process.env.USER ?? process.env.USERNAME ?? os.userInfo().username ?? "default_user";
 const mindPath = path.join(stateDir, "mind.json");
 const lastTickPath = path.join(stateDir, "last_tick.json");
 
