@@ -5,13 +5,13 @@ description: Show your buddy's full stat card with traits, emotions, and evoluti
 
 # Buddy Card
 
-Use the `buddy_card` MCP tool to get the full stat card. Display it as a formatted card showing:
+Read the buddy's mind.json file from the plugin data directory to get full stats. Display a formatted card showing:
 
-1. **Species** and tick count (how long they've been alive)
-2. **Top 10 traits** with current values and shift from creation (show as +/- delta)
+1. **Species** and tick count
+2. **Top 10 traits** with current values and shift from creation
 3. **Active emotions** with intensity
-4. **Recent evolution events** (what triggers fired)
-5. **Earned adornments** with descriptions of how they were earned
-6. **Council activations** — which voices are most active
+4. **Recent evolution events**
+5. **Earned adornments**
+6. **Council activations**
 
-Format it nicely with aligned columns. This is the buddy's identity card.
+The mind.json location is `${CLAUDE_PLUGIN_DATA}/mind.json` or `~/.smartbuddy/mind.json`.

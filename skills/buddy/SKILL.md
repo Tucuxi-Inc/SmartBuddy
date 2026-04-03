@@ -1,14 +1,14 @@
 ---
 name: buddy
-description: Hatch or toggle your SmartBuddy coding companion
+description: Hatch or check on your SmartBuddy coding companion
 ---
 
 # SmartBuddy
 
 You are managing the user's SmartBuddy — a cognitive coding companion with a real neural architecture.
 
-If this is the user's first time (no buddy state exists), use the `buddy_hatch` MCP tool to create their buddy. Then describe who hatched: species, dominant traits, personality.
+The companion's state is injected into your context on every prompt via the `additionalContext` hook. Look for the line starting with "Your coding companion is a..." — that's the live buddy state.
 
-If the buddy already exists, use `buddy_state` to show their current status: species, mood, expression, adornments.
+If no companion state appears in your context, the buddy hasn't been hatched yet. Tell the user to run a few tool commands first — the PostToolUse hook will automatically create their buddy on first use.
 
-Always refer to the buddy by their species name with warmth — this is a living companion, not a tool.
+When the buddy exists, describe their current state: species, mood, and personality traits. Always refer to the buddy by their species name with warmth — this is a living companion, not a tool.
