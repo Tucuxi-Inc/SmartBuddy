@@ -166,7 +166,7 @@ Adornments are visual markers that your buddy earns through real cognitive miles
 
 ## License
 
-Free for personal and non-commercial use under the [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/) license. Contact kevin@tucuxi.ai for commercial licensing.
+Free for personal and non-commercial use under the [license](LICENSE). Contact kevin@tucuxi.ai for commercial licensing.
 
 ## Credits
 
