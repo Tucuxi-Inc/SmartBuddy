@@ -36,26 +36,42 @@ SmartBuddy runs **entirely on your machine**. No exceptions.
 - **No network calls.** Zero. The cognitive engine is pure math running locally. No API calls, no telemetry, no phoning home.
 - **No LLM in the loop.** Your buddy's brain is a lightweight neural network (~50KB), not an LLM. Decisions come from math, not inference calls.
 - **No code access.** SmartBuddy never reads your source files. It only sees tool names (e.g., "Bash", "Edit"), file paths, and success/fail signals from Claude Code hooks. It has no access to file contents, terminal output, or conversation text.
-- **No data collection.** All state lives in your local plugin data directory (`~/.claude/plugins/data/smartbuddy/`). Nothing leaves your machine.
+- **No data collection.** All state lives in your local plugin data directory. Nothing leaves your machine.
 
 ## How It Works
 
+Every time you use a tool in Claude Code, SmartBuddy runs a full cognitive tick through a genuine neural architecture:
+
 ```
-  Coding Events (tool use)
-    -> Perception Mapper (14-dim vector)
-      -> 5 Director RNNs (14->8->6, learn via REINFORCE)
-        -> 8-Voice Council (deliberates)
-          -> Decision Model (U = P^T * W * x + b)
-            -> Action + Expression + Speech
-
-  50-Trait Personality (feeds everything)
-  12 Emotions (decay, modify traits)
-  7 Evolution Triggers (permanent shifts)
+  Coding Event (Bash, Edit, Read, ...)
+    |
+    v
+  Perception Mapper -----------> 14-dim vector (novelty, pressure, momentum, ...)
+    |
+    v
+  5 Director RNNs (14->8->6) --> 6-dim behavioral bias (learned via REINFORCE)
+    |
+    v
+  8-Voice Council --------------> 50-dim trait modulation (amplify/dampen)
+    |
+    v
+  Decision Model (U = P^T * W * s + b) --> 1 of 11 actions
+    |
+    v
+  Expression + Speech ----------> ASCII sprite + personality-filtered words
 ```
 
-Your buddy runs a genuine cognitive architecture on every tick. A 50-trait personality vector feeds into five neural network directors that each learn from your coding patterns through reinforcement learning. Before every reaction, an 8-voice council deliberates by amplifying or dampening trait contributions based on the current situation. The result flows through a utility-based decision model that weighs personality against perception to select one of 11 possible actions.
+**Personality** is a 50-dimensional trait vector that feeds everything. Traits like patience, curiosity, and assertiveness sit in [0, 1] and influence every decision your buddy makes.
 
-Real emotions arise from coding events, decay naturally over time, and temporarily shift trait expression while active. Personality itself evolves through genuine experience: weeks of debugging builds patience, creative exploration deepens curiosity, and breakthroughs boost confidence.
+**Emotions** arise from coding events -- test passes trigger joy, failures trigger frustration, exploring new files triggers curiosity. Each emotion decays linearly over time and temporarily shifts trait expression while active.
+
+**Evolution** happens through sustained coding patterns. Weeks of debugging builds patience. Creative exploration deepens curiosity. Breakthroughs boost confidence. Trait shifts are tiny by design (0.01-0.03 per trigger) so personality change is slow and genuine.
+
+**Directors** are five small RNNs that learn your coding patterns through reinforcement learning. They start nearly perception-blind and gradually discover which signals matter, producing behavioral biases that tilt decision-making toward actions that suit the current situation.
+
+**The Council** is an 8-voice deliberation layer (Cortex, Seer, Oracle, House, Prudence, Hypothalamus, Amygdala, Conscience) where each voice's strength depends on the buddy's current personality. Dominant voices amplify their associated traits; weak voices dampen them.
+
+For the complete mathematical specification -- every equation, every weight matrix, every constant -- see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Species
 
@@ -100,21 +116,17 @@ npm install          # Install dev dependencies (TypeScript, Vitest)
 npm run build        # Compile src/ and hooks-src/ to dist/
 npm test             # Run all tests (~122 tests, <1 second)
 npm run test:watch   # Watch mode for development
-
-# Run a single test file
-npx vitest run tests/brain.test.ts
-
-# Run tests matching a name pattern
-npx vitest run -t "full session lifecycle"
 ```
 
 Code lives in `src/`, hooks in `hooks-src/`, tests in `tests/`. The pre-compiled `dist/` directory is committed so end users need zero build steps. Run `npm run build` after any source changes before committing.
 
 **Important**: This is a zero-dependency project. There are no runtime dependencies -- only dev dependencies (TypeScript compiler and Vitest). The cognitive engine is pure math implemented in TypeScript.
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full mathematical specification -- decision model equations, RNN weight layout, council voice weights, trait taxonomy, perception dimensions, emotion decay formulas, and evolution rules.
+**Open for contribution**: sprite expressions, speech templates, perception mappings, evolution triggers, adornments, and animations. See [CONTRIBUTING.md](CONTRIBUTING.md) for complete walkthroughs with code examples for each contribution type.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+**Reference docs**:
+- [ARCHITECTURE.md](ARCHITECTURE.md) -- full mathematical specification (decision model equations, RNN weight layout, council voice weights, trait taxonomy, perception dimensions, emotion decay, evolution rules)
+- [CONTRIBUTING.md](CONTRIBUTING.md) -- development workflow, project structure, hook system docs, state format, debugging guide, first contribution walkthroughs, test strategy, and future directions
 
 ## License
 

@@ -65,16 +65,23 @@ BuddyBrain (brain.ts) — orchestrator, state management, save/load
 
 Two hooks registered in `hooks/hooks.json`:
 
-- **on-prompt-submit.ts** (UserPromptSubmit) — Loads mind.json, calls `brain.getContext()`, injects buddy state as `additionalContext` into every prompt
-- **on-tool-use.ts** (PostToolUse, matches Bash|Edit|Write|Read|Glob|Grep) — Parses tool event from stdin, calls `brain.tick()`, saves updated mind.json
+- **on-prompt-submit.ts** (UserPromptSubmit) — Loads mind.json, calls `brain.getContext()` + `brain.getCard()`, reads `last_tick.json` for sprite/speech, outputs JSON with `hookSpecificOutput.additionalContext`
+- **on-tool-use.ts** (PostToolUse, matches Bash|Edit|Write|Read|Glob|Grep) — Reads tool event from stdin as `{ tool_name, tool_input, success }`, calls `brain.tick()`, saves mind.json + last_tick.json
 
-Both hooks fail silently (no stderr) to avoid breaking Claude Code's hook parsing. Timeout: 5 seconds each.
+Both hooks fail silently (empty catch blocks, no stderr) to avoid breaking Claude Code's hook parsing. Timeout: 5 seconds each.
+
+**Hook I/O contracts**:
+- `on-tool-use` stdin: `{ "tool_name": "Bash", "tool_input": { "command": "..." }, "success": true }`
+- `on-prompt-submit` stdout: `{ "hookSpecificOutput": { "hookEventName": "UserPromptSubmit", "additionalContext": "..." } }`
+- `last_tick.json` bridges the two hooks — written by on-tool-use (tick result), read by on-prompt-submit (sprite + speech)
 
 ### State Persistence
 
 - Directory: `~/.smartbuddy/` (or `CLAUDE_PLUGIN_DATA` env var)
-- `mind.json` — full cognitive state (traits, RNN weights, emotions, shifts, evolution history)
+- `mind.json` — full cognitive state: traits (50-element array), traits_at_creation, director_pool (5 RNNs with 252-weight genomes + hidden states), emotional_states, personality_shifts, evolution_history, tick_count, frustration_count, challenge_count
+- `last_tick.json` — most recent tick result: action, expression, speech, spriteFrame, councilDominant
 - JSON keys are **snake_case** for backward compatibility with the Python version, even though TS code uses camelCase internally
+- Serialization/deserialization lives in `brain.ts` (`saveMind`/`loadMind`)
 - `mind.json` written by the old Python version loads without migration
 
 ### Skills (skills/)
@@ -100,4 +107,5 @@ Maintained by Tucuxi (not open for external changes): core cognitive engine arch
 ## Reference
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — full mathematical specification (decision model equations, RNN weight layout, council voice weights, trait taxonomy, perception dimensions, emotion decay, evolution rules)
+- [CONTRIBUTING.md](CONTRIBUTING.md) — developer workflow, hook system docs, state format, debugging guide, contribution walkthroughs, test strategy, future directions
 - [docs/specs/2026-04-02-typescript-port-design.md](docs/specs/2026-04-02-typescript-port-design.md) — TypeScript port design decisions and module mapping
