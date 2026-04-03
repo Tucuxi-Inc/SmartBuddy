@@ -1,0 +1,22 @@
+{
+  "name": "smartbuddy",
+  "version": "0.1.0",
+  "description": "A cognitive coding companion that actually thinks — 50 traits, RNN directors, 8-voice council",
+  "author": {
+    "name": "Tucuxi Inc",
+    "url": "https://github.com/Tucuxi-Inc"
+  },
+  "homepage": "https://github.com/Tucuxi-Inc/SmartBuddy",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "mcpServers": {
+    "smartbuddy-engine": {
+      "command": "python3",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/engine/server.py"],
+      "env": {
+        "BUDDY_STATE_DIR": "${CLAUDE_PLUGIN_DATA}",
+        "BUDDY_USER_ID": "${CLAUDE_USER_ID}",
+        "BUDDY_PROJECT_DIR": "${CLAUDE_PROJECT_DIR}"
+      }
+    }
+  }
+}
