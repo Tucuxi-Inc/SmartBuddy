@@ -538,12 +538,13 @@ export class BuddyBrain {
 
   private _triggerEmotions(toolEvent: ToolEvent): void {
     const success = toolEvent.success ?? true;
+    const toolName = toolEvent.tool_name ?? "";
     const cmd = (
       ((toolEvent.tool_input ?? {}) as Record<string, unknown>).command ?? ""
     ) as string;
     const cmdLower = cmd.toLowerCase();
-    const isTest = ["pytest", "npm test", "cargo test", "jest"].some((t) =>
-      cmdLower.includes(t),
+    const isTest = ["pytest", "npm test", "cargo test", "jest", "vitest"].some(
+      (t) => cmdLower.includes(t),
     );
 
     if (isTest && success) {
@@ -576,8 +577,59 @@ export class BuddyBrain {
       );
     }
 
-    // Novelty triggers curiosity
+    // Editing code triggers mild satisfaction or excitement
+    if (toolName === "Edit" || toolName === "Write") {
+      if (success) {
+        this._emotionalStates.push(
+          this._emotionalSystem.addEmotion(
+            Emotion.SATISFACTION,
+            0.3,
+            0.3,
+            this._tickCount,
+          ),
+        );
+      }
+    }
+
+    // Reading/exploring triggers curiosity at lower threshold than novelty
+    if (toolName === "Read" || toolName === "Glob" || toolName === "Grep") {
+      this._emotionalStates.push(
+        this._emotionalSystem.addEmotion(
+          Emotion.CURIOSITY,
+          0.3,
+          0.3,
+          this._tickCount,
+        ),
+      );
+    }
+
+    // Bash commands trigger excitement (something is happening)
+    if (toolName === "Bash" && success) {
+      this._emotionalStates.push(
+        this._emotionalSystem.addEmotion(
+          Emotion.EXCITEMENT,
+          0.25,
+          0.3,
+          this._tickCount,
+        ),
+      );
+    }
+
+    // Sustained success streak triggers contentment
     const vec = this._perception.getVector();
+    if (vec[3] > 0.6) {
+      // session_momentum > 0.6 means a good streak
+      this._emotionalStates.push(
+        this._emotionalSystem.addEmotion(
+          Emotion.CONTENTMENT,
+          0.3,
+          0.4,
+          this._tickCount,
+        ),
+      );
+    }
+
+    // Novelty triggers curiosity
     if (vec[5] > 0.6) {
       this._emotionalStates.push(
         this._emotionalSystem.addEmotion(
